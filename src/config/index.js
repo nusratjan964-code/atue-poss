@@ -1,11 +1,14 @@
 const path = require('path');
+const os = require('os');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+
+const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 
 module.exports = {
   PORT: process.env.PORT || 3000,
   NODE_ENV: process.env.NODE_ENV || 'development',
-  DATA_DIR: path.join(__dirname, '../../data'),
-  TEMP_DIR: path.join(__dirname, '../../temp'),
+  DATA_DIR: isServerless ? path.join(os.tmpdir(), 'drive2social_data') : path.join(__dirname, '../../data'),
+  TEMP_DIR: isServerless ? path.join(os.tmpdir(), 'drive2social_temp') : path.join(__dirname, '../../temp'),
   
   // Security
   APP_SECRET: process.env.APP_SECRET || 'drive2social-default-secret-key-32chars!!',

@@ -15,19 +15,30 @@ const REQUIRED_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.profile'
 ];
 
-function getGoogleCredentials() {
+function getGoogleCredentials(req = null) {
   const db = getDb();
   const clientId = (db && db.settings && db.settings.googleClientId) ? db.settings.googleClientId.trim() : (config.GOOGLE_CLIENT_ID || '').trim();
   const clientSecret = (db && db.settings && db.settings.googleClientSecret) ? db.settings.googleClientSecret.trim() : (config.GOOGLE_CLIENT_SECRET || '').trim();
-  const redirectUri = config.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback';
+  
+  let redirectUri = config.GOOGLE_REDIRECT_URI;
+  if (req) {
+    const proto = req.headers['x-forwarded-proto'] || (req.connection && req.connection.encrypted ? 'https' : 'http') || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    if (host) {
+      redirectUri = `${proto}://${host}/api/auth/google/callback`;
+    }
+  }
+  if (!redirectUri) {
+    redirectUri = 'http://localhost:3000/api/auth/google/callback';
+  }
   return { clientId, clientSecret, redirectUri };
 }
 
 /**
  * Returns Google OAuth Authorization URL.
  */
-function getAuthUrl(state = '') {
-  const { clientId, redirectUri } = getGoogleCredentials();
+function getAuthUrl(state = '', req = null) {
+  const { clientId, redirectUri } = getGoogleCredentials(req);
   if (!clientId) {
     throw new Error('Google Client ID কনফিগার করা নেই। অনুগ্রহ করে Settings বা Social Accounts থেকে Google Client ID প্রদান করুন।');
   }
@@ -50,8 +61,8 @@ function getAuthUrl(state = '') {
 /**
  * Exchanges authorization code for access and refresh tokens.
  */
-async function exchangeCodeForTokens(code) {
-  const { clientId, clientSecret, redirectUri } = getGoogleCredentials();
+async function exchangeCodeForTokens(code, req = null) {
+  const { clientId, clientSecret, redirectUri } = getGoogleCredentials(req);
   if (!clientId || !clientSecret) {
     throw new Error('Google Client ID এবং Client Secret উভয়ই প্রয়োজন। Settings থেকে কনফিগার করুন।');
   }

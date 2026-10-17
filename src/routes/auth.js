@@ -39,7 +39,7 @@ router.get('/status', async (req, res) => {
 // Generate Google OAuth URL
 router.get('/google/url', (req, res) => {
   try {
-    const authUrl = googleAuth.getAuthUrl();
+    const authUrl = googleAuth.getAuthUrl('', req);
     res.json({ url: authUrl });
   } catch (err) {
     res.status(400).json({
@@ -71,7 +71,7 @@ router.get('/google/callback', async (req, res) => {
   }
 
   try {
-    const result = await googleAuth.exchangeCodeForTokens(code);
+    const result = await googleAuth.exchangeCodeForTokens(code, req);
     const email = result.profile?.email || 'Authorized User';
 
     res.send(`

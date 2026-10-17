@@ -406,8 +406,12 @@ async function streamDriveVideo(fileId, req, res) {
  */
 async function downloadVideoToTempFile(fileId) {
   const tempDir = config.TEMP_DIR;
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
+  try {
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+  } catch (e) {
+    console.warn('[GoogleDrive] Could not create tempDir:', e.message);
   }
 
   const tempFilePath = path.join(tempDir, `drive_${fileId}_${Date.now()}.mp4`);

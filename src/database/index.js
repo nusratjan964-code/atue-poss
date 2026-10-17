@@ -84,12 +84,16 @@ const DEFAULT_STATE = {
 let dbCache = null;
 
 function ensureDataDirectory() {
-  if (!fs.existsSync(config.DATA_DIR)) {
-    fs.mkdirSync(config.DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(config.TEMP_DIR)) {
-    fs.mkdirSync(config.TEMP_DIR, { recursive: true });
-  }
+  try {
+    if (!fs.existsSync(config.DATA_DIR)) {
+      fs.mkdirSync(config.DATA_DIR, { recursive: true });
+    }
+  } catch (e) {}
+  try {
+    if (!fs.existsSync(config.TEMP_DIR)) {
+      fs.mkdirSync(config.TEMP_DIR, { recursive: true });
+    }
+  } catch (e) {}
 }
 
 function loadDatabase() {

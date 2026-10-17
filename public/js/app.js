@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initQueueEvents();
   initAccountEvents();
   initSettingsEvents();
+  updateRedirectUriChips();
 
   // Initial load
   loadDashboardStats();
@@ -798,13 +799,15 @@ function initAccountEvents() {
 
   if (btnCopyRedirect) {
     btnCopyRedirect.addEventListener('click', () => {
-      navigator.clipboard.writeText('http://localhost:3000/api/auth/google/callback');
+      const currentUri = `${window.location.origin}/api/auth/google/callback`;
+      navigator.clipboard.writeText(currentUri);
       showToast('Redirect URI ক্লিপবোর্ডে কপি হয়েছে!', 'success');
     });
   }
   if (btnCopyRedirectSettings) {
     btnCopyRedirectSettings.addEventListener('click', () => {
-      navigator.clipboard.writeText('http://localhost:3000/api/auth/google/callback');
+      const currentUri = `${window.location.origin}/api/auth/google/callback`;
+      navigator.clipboard.writeText(currentUri);
       showToast('Redirect URI ক্লিপবোর্ডে কপি হয়েছে!', 'success');
     });
   }
@@ -1507,9 +1510,20 @@ async function saveAllSettings() {
 // 8. Utilities & Modals
 // ==============================================================================
 
+function updateRedirectUriChips() {
+  const currentUri = `${window.location.origin}/api/auth/google/callback`;
+  const chip1 = document.getElementById('chipGoogleRedirectUri');
+  const chip2 = document.getElementById('chipGoogleRedirectUriSettings');
+  if (chip1) chip1.textContent = currentUri;
+  if (chip2) chip2.textContent = currentUri;
+}
+
 function openModal(id) {
   const modal = document.getElementById(id);
   if (modal) modal.style.display = 'flex';
+  if (id === 'modalGoogleSetup') {
+    updateRedirectUriChips();
+  }
 }
 
 function closeModal(id) {
