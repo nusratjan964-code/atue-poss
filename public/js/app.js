@@ -1114,7 +1114,8 @@ function escapeJs(str) {
 
 async function triggerGoogleOAuthFlow() {
   try {
-    const res = await fetch('/api/auth/google/url');
+    const redirectUri = `${window.location.origin}/api/auth/google/callback`;
+    const res = await fetch(`/api/auth/google/url?redirect_uri=${encodeURIComponent(redirectUri)}`);
     const cType = res.headers.get('content-type') || '';
     if (!cType.includes('application/json')) {
       openModal('modalGoogleSetup');

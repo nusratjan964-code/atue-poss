@@ -15,13 +15,16 @@ const REQUIRED_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.profile'
 ];
 
-function getGoogleCredentials(req = null) {
+function getGoogleCredentials(req = null, customRedirect = null) {
   const db = getDb();
   const clientId = (db && db.settings && db.settings.googleClientId) ? db.settings.googleClientId.trim() : (config.GOOGLE_CLIENT_ID || '').trim();
   const clientSecret = (db && db.settings && db.settings.googleClientSecret) ? db.settings.googleClientSecret.trim() : (config.GOOGLE_CLIENT_SECRET || '').trim();
   
-  let redirectUri = config.GOOGLE_REDIRECT_URI;
-  if (req) {
+  let redirectUri = customRedirect;
+  if (!redirectUri && req && req.query && req.query.redirect_uri) {
+    redirectUri = req.query.redirect_uri.trim();
+  }
+  if (!redirectUri && req) {
     const proto = req.headers['x-forwarded-proto'] || (req.connection && req.connection.encrypted ? 'https' : 'http') || req.protocol || 'http';
     const host = req.headers['x-forwarded-host'] || req.headers.host;
     if (host) {
@@ -29,7 +32,7 @@ function getGoogleCredentials(req = null) {
     }
   }
   if (!redirectUri) {
-    redirectUri = 'http://localhost:3000/api/auth/google/callback';
+    redirectUri = config.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback';
   }
   return { clientId, clientSecret, redirectUri };
 }
@@ -37,11 +40,18 @@ function getGoogleCredentials(req = null) {
 /**
  * Returns Google OAuth Authorization URL.
  */
-function getAuthUrl(state = '', req = null) {
-  const { clientId, redirectUri } = getGoogleCredentials(req);
+function getAuthUrl(state = '', req = null, customRedirect = null) {
+  const { clientId, redirectUri } = getGoogleCredentials(req, customRedirect);
   if (!clientId) {
     throw new Error('Google Client ID কনফিগার করা নেই। অনুগ্রহ করে Settings বা Social Accounts থেকে Google Client ID প্রদান করুন।');
   }
+
+  // Pack redirectUri into state so callback can reliably decode it
+  let finalState = state;
+  try {
+    const stateObj = { redirectUri, userState: state || '' };
+    finalState = Buffer.from(JSON.stringify(stateObj)).toString('base64');
+  } catch (e) {}
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -53,7 +63,7 @@ function getAuthUrl(state = '', req = null) {
     include_granted_scopes: 'true'
   });
 
-  if (state) params.set('state', state);
+  if (finalState) params.set('state', finalState);
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
@@ -61,8 +71,17 @@ function getAuthUrl(state = '', req = null) {
 /**
  * Exchanges authorization code for access and refresh tokens.
  */
-async function exchangeCodeForTokens(code, req = null) {
-  const { clientId, clientSecret, redirectUri } = getGoogleCredentials(req);
+async function exchangeCodeForTokens(code, req = null, customRedirect = null) {
+  let effectiveRedirect = customRedirect;
+  if (!effectiveRedirect && req && req.query && req.query.state) {
+    try {
+      const decoded = JSON.parse(Buffer.from(req.query.state, 'base64').toString('utf8'));
+      if (decoded && decoded.redirectUri) {
+        effectiveRedirect = decoded.redirectUri;
+      }
+    } catch (e) {}
+  }
+  const { clientId, clientSecret, redirectUri } = getGoogleCredentials(req, effectiveRedirect);
   if (!clientId || !clientSecret) {
     throw new Error('Google Client ID এবং Client Secret উভয়ই প্রয়োজন। Settings থেকে কনফিগার করুন।');
   }

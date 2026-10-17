@@ -888,14 +888,17 @@
           </div>
           <div class="step-guide-item">
             <div class="step-num">১</div>
-            <div><strong>Google Cloud Credentials</strong> এ গিয়ে <strong>Create Credentials -> OAuth client ID</strong> (Web application) নির্বাচন করুন।</div>
+            <div><strong>Google Cloud Credentials</strong> এ গিয়ে <strong>Create Credentials -> OAuth client ID</strong> (Web application) নির্বাচন করুন (বা বিদ্যমান ক্লায়েন্ট এডিট করুন)।</div>
           </div>
           <div class="step-guide-item">
             <div class="step-num">২</div>
             <div>
-              Authorized redirect URIs-তে এই লিংকটি পেস্ট করুন: 
-              <span class="code-chip" id="chipGoogleRedirectUri">http://localhost:3000/api/auth/google/callback</span>
-              <button type="button" class="btn btn-ghost btn-xs" id="btnCopyRedirectUri" title="কপি করুন" style="padding: 2px 6px;"><i class="fa-solid fa-copy"></i></button>
+              <strong>Authorized redirect URIs</strong>-তে এই লিংকটি পেস্ট করুন: 
+              <div style="margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="code-chip" id="chipGoogleRedirectUri" style="user-select: all; word-break: break-all;">https://atue-poss-git-main-atue-poser.vercel.app/api/auth/google/callback</span>
+                <button type="button" class="btn btn-outline btn-xs" id="btnCopyRedirectUri" title="কপি করুন" style="color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.4);"><i class="fa-solid fa-copy"></i> কপি করুন</button>
+              </div>
+              <small style="color: #94a3b8; font-size: 11px; display: block; margin-top: 4px;">⚠️ গুরুত্বপূর্ণ: Google Cloud-এ এই লিংকটি হুবহু পেস্ট না থাকলে "redirect_uri_mismatch" এরর দেখাবে।</small>
             </div>
           </div>
           <div class="step-guide-item">

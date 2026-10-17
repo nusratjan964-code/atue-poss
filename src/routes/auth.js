@@ -39,7 +39,8 @@ router.get('/status', async (req, res) => {
 // Generate Google OAuth URL
 router.get('/google/url', (req, res) => {
   try {
-    const authUrl = googleAuth.getAuthUrl('', req);
+    const customRedirect = req.query.redirect_uri;
+    const authUrl = googleAuth.getAuthUrl('', req, customRedirect);
     res.json({ url: authUrl });
   } catch (err) {
     res.status(400).json({
