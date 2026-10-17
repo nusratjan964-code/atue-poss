@@ -3,7 +3,10 @@ const path = require('path');
 const config = require('../config');
 const crypto = require('../security/crypto');
 
-const DB_FILE = path.join(config.DATA_DIR, 'database.json');
+const DB_FILE = process.env.VERCEL
+  ? path.join('/tmp', 'database.json')
+  : path.join(config.DATA_DIR, 'database.json');
+const ORIGINAL_DB_FILE = path.join(__dirname, '../../data', 'database.json');
 
 // Initial Schema
 const DEFAULT_STATE = {
@@ -91,6 +94,11 @@ function ensureDataDirectory() {
 
 function loadDatabase() {
   ensureDataDirectory();
+  if (process.env.VERCEL && !fs.existsSync(DB_FILE) && fs.existsSync(ORIGINAL_DB_FILE)) {
+    try {
+      fs.copyFileSync(ORIGINAL_DB_FILE, DB_FILE);
+    } catch (e) {}
+  }
   if (!fs.existsSync(DB_FILE)) {
     saveDatabase(DEFAULT_STATE);
     dbCache = JSON.parse(JSON.stringify(DEFAULT_STATE));

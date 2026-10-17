@@ -845,15 +845,20 @@ function initAccountEvents() {
 async function handleGoogleConnectRequest() {
   try {
     const res = await fetch('/api/auth/status');
+    const cType = res.headers.get('content-type') || '';
+    if (!cType.includes('application/json')) {
+      openModal('modalGoogleSetup');
+      return;
+    }
     const data = await res.json();
-    if (!data.google.configured) {
+    if (!data.google || !data.google.configured) {
       openModal('modalGoogleSetup');
       showToast('প্রথমে Google Client ID ও Secret প্রদান করুন।', 'info');
       return;
     }
     triggerGoogleOAuthFlow();
   } catch (e) {
-    triggerGoogleOAuthFlow();
+    openModal('modalGoogleSetup');
   }
 }
 
@@ -1107,6 +1112,11 @@ function escapeJs(str) {
 async function triggerGoogleOAuthFlow() {
   try {
     const res = await fetch('/api/auth/google/url');
+    const cType = res.headers.get('content-type') || '';
+    if (!cType.includes('application/json')) {
+      openModal('modalGoogleSetup');
+      return;
+    }
     const data = await res.json();
     if (data.url) {
       window.open(data.url, 'google_oauth_popup', 'width=600,height=700');
@@ -1116,6 +1126,7 @@ async function triggerGoogleOAuthFlow() {
     }
   } catch (err) {
     showToast(`OAuth ত্রুটি: ${err.message}`, 'error');
+    openModal('modalGoogleSetup');
   }
 }
 

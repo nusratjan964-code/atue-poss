@@ -105,17 +105,21 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ success: false, error: err.message || 'Internal Server Error' });
 });
 
-// Start Server & Background Scheduler
+// Start Server & Background Scheduler if not on serverless
 const PORT = config.PORT;
-app.listen(PORT, () => {
-  console.log('====================================================');
-  console.log(`🚀 Drive2Social AI Engine`);
-  console.log(`📡 Server running at: http://localhost:${PORT}`);
-  console.log(`⏱️ Default Timezone: ${config.DEFAULT_TIMEZONE} (Max 3 videos/day)`);
-  console.log(`🤖 Gemini Model: ${config.GEMINI_MODEL}`);
-  console.log('====================================================');
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log('====================================================');
+    console.log(`🚀 Drive2Social AI Engine`);
+    console.log(`📡 Server running at: http://localhost:${PORT}`);
+    console.log(`⏱️ Default Timezone: ${config.DEFAULT_TIMEZONE} (Max 3 videos/day)`);
+    console.log(`🤖 Gemini Model: ${config.GEMINI_MODEL}`);
+    console.log('====================================================');
 
-  // Initialize background scheduler
-  scheduler.startScheduler(60000); // Polls every 60 seconds
-  addAuditLog('system', `Drive2Social AI সার্ভার সফলভাবে চালু হয়েছে (Port: ${PORT})`);
-});
+    // Initialize background scheduler
+    scheduler.startScheduler(60000); // Polls every 60 seconds
+    addAuditLog('system', `Drive2Social AI সার্ভার সফলভাবে চালু হয়েছে (Port: ${PORT})`);
+  });
+}
+
+module.exports = app;
