@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test": "node tests/run-all.js"
   },
   "keywords": [
     "youtube-shorts",
@@ -16,5 +17,9 @@
     "automation"
   ],
   "author": "mdnahid7653959-spec",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0"
+  }
 }

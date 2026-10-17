@@ -1,4 +1,7 @@
 node_modules/
+temp/
+data/backups/
+drive_folder_response.html
 full_drive_page.html
 extracted_text.txt
 test_*.js

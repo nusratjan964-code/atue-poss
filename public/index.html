@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drive2Social AI — AI-Powered Google Drive to Social Media Auto Publisher</title>
+  <meta name="description" content="Production-ready auto publisher selecting Google Drive videos, analyzing with Gemini Multimodal AI, and publishing to YouTube, Facebook, Instagram & TikTok.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="dark-theme">
+
+  <!-- Top Application Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand-logo">
+        <div class="logo-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+        <div class="brand-text">
+          <h1>Drive2Social <span class="ai-badge">AI 2.0</span></h1>
+          <p class="brand-sub">Google Drive &bull; Gemini Multimodal &bull; Social Auto-Publisher</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live System Health Badges -->
+    <div class="header-center">
+      <div class="status-pill drive-status" id="hdrDriveStatus" title="Google Drive Integration">
+        <span class="dot-indicator green"></span>
+        <i class="fa-brands fa-google-drive"></i>
+        <span>Drive: <strong id="hdrDriveLabel">Connected</strong></span>
+      </div>
+      <div class="status-pill gemini-status" id="hdrGeminiStatus" title="Gemini Multimodal AI">
+        <span class="dot-indicator purple"></span>
+        <i class="fa-solid fa-brain"></i>
+        <span>Gemini: <strong id="hdrGeminiLabel">2.5 Flash</strong></span>
+      </div>
+      <div class="status-pill daily-status" id="hdrDailyStatus" title="Today's Processing Limit (Asia/Dhaka)">
+        <i class="fa-solid fa-calendar-check"></i>
+        <span>আজকের সীমা: <strong id="hdrDailyCount">0 / 3</strong></span>
+      </div>
+      <div class="status-pill mode-status" id="hdrModeStatus" title="Current Publishing Mode">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span id="hdrModeLabel">Review Mode</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="btn btn-primary btn-sm" id="btnQuickTrigger" title="এখনই পরবর্তী ভিডিও প্রসেস করুন">
+        <i class="fa-solid fa-bolt"></i> <span>ভিডিও প্রসেস করুন</span>
+      </button>
+      <button class="btn btn-outline btn-sm" id="btnRefreshAll" title="সব ডেটা রিফ্রেশ করুন">
+        <i class="fa-solid fa-arrows-rotate"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="app-layout">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar">
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="tab-overview">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>ওভারভিউ ড্যাশবোর্ড</span>
+        </button>
+        <button class="nav-item" data-tab="tab-drive">
+          <i class="fa-brands fa-google-drive"></i>
+          <span>গুগল ড্রাইভ লাইব্রেরি</span>
+          <span class="nav-count" id="navDriveCount">0</span>
+        </button>
+        <button class="nav-item" data-tab="tab-studio">
+          <i class="fa-solid fa-wand-magic-sparkles text-purple"></i>
+          <span>AI ক্যাপশন স্টুডিও</span>
+        </button>
+        <button class="nav-item" data-tab="tab-queue">
+          <i class="fa-solid fa-list-check"></i>
+          <span>পোস্টিং কিউ ও হিস্ট্রি</span>
+          <span class="nav-count gold" id="navQueueCount">0</span>
+        </button>
+        <button class="nav-item" data-tab="tab-accounts">
+          <i class="fa-solid fa-share-nodes text-blue"></i>
+          <span>সোশ্যাল অ্যাকাউন্টস</span>
+          <span class="nav-count green" id="navAccountsCount">4</span>
+        </button>
+        <button class="nav-item" data-tab="tab-settings">
+          <i class="fa-solid fa-sliders"></i>
+          <span>সেটিংস ও খরচ নিয়ন্ত্রণ</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Bottom Help/Info -->
+      <div class="sidebar-footer">
+        <div class="timezone-badge">
+          <i class="fa-solid fa-clock"></i> <span id="lblSidebarTz">Asia/Dhaka</span>
+        </div>
+        <div class="version-tag">Production Engine v2.0</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Panels -->
+    <main class="app-main">
+
+      <!-- ============================================================== -->
+      <!-- TAB 1: OVERVIEW DASHBOARD -->
+      <!-- ============================================================== -->
+      <section class="tab-panel active" id="tab-overview">
+        <div class="panel-header">
+          <div>
+            <h2><i class="fa-solid fa-chart-pie text-blue"></i> ওভারভিউ ড্যাশবোর্ড (Live Overview)</h2>
+            <p class="subtitle">Google Drive থেকে ভিডিও নির্বাচন, Gemini AI কন্টেন্ট বিশ্লেষণ এবং সোশ্যাল পোস্টের সামগ্রিক চিত্র</p>
+          </div>
+          <div class="panel-actions">
+            <span class="live-tag"><span class="pulse-dot"></span> লাইভ অটোমেশন সক্রিয়</span>
+          </div>
+        </div>
+
+        <!-- 6 Core KPI Metric Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card card-cyan">
+            <div class="m-icon"><i class="fa-solid fa-calendar-day"></i></div>
+            <div class="m-content">
+              <span class="m-label">আজকের প্রসেস সম্পন্ন</span>
+              <h3 class="m-value" id="kpiTodayCount">0 <span class="m-sub">/ 3 ভিডিও</span></h3>
+              <div class="progress-bar-bg"><div class="progress-bar-fill" id="kpiTodayProgress" style="width: 0%;"></div></div>
+            </div>
+          </div>
+
+          <div class="metric-card card-purple">
+            <div class="m-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+            <div class="m-content">
+              <span class="m-label">অনুমোদনের অপেক্ষায় (Review)</span>
+              <h3 class="m-value" id="kpiAwaitingApproval">0 <span class="m-sub">ভিডিও</span></h3>
+              <span class="m-hint">ক্যাপশন দেখে প্রকাশ করুন</span>
+            </div>
+          </div>
+
+          <div class="metric-card card-green">
+            <div class="m-icon"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="m-content">
+              <span class="m-label">সফলভাবে প্রকাশিত</span>
+              <h3 class="m-value" id="kpiTotalPublished">0 <span class="m-sub">টি পোস্ট</span></h3>
+              <span class="m-hint text-green"><i class="fa-solid fa-arrow-trend-up"></i> কোনো ডুপ্লিকেট নেই</span>
+            </div>
+          </div>
+
+          <div class="metric-card card-gold">
+            <div class="m-icon"><i class="fa-solid fa-spinner fa-spin"></i></div>
+            <div class="m-content">
+              <span class="m-label">বিশ্লেষণ ও কিউতে আছে</span>
+              <h3 class="m-value" id="kpiInQueue">0 <span class="m-sub">ভিডিও</span></h3>
+              <span class="m-hint">শিডিউল অনুযায়ী প্রসেস হবে</span>
+            </div>
+          </div>
+
+          <div class="metric-card card-blue">
+            <div class="m-icon"><i class="fa-brands fa-google-drive"></i></div>
+            <div class="m-content">
+              <span class="m-label">ড্রাইভ লাইব্রেরি ভিডিও</span>
+              <h3 class="m-value" id="kpiTotalDriveVideos">0 <span class="m-sub">টি রিলস</span></h3>
+              <span class="m-hint" id="kpiFolderTitle">ফোল্ডার লোড হচ্ছে...</span>
+            </div>
+          </div>
+
+          <div class="metric-card card-red">
+            <div class="m-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="m-content">
+              <span class="m-label">ব্যর্থ / মনোযোগ প্রয়োজন</span>
+              <h3 class="m-value" id="kpiFailedCount">0 <span class="m-sub">টি ত্রুটি</span></h3>
+              <span class="m-hint">রিট্রাই অপশন রয়েছে</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2-Column Row: Pipeline Overview + Connected Channels -->
+        <div class="dashboard-grid-row">
+          
+          <!-- Publishing Pipeline Visualizer -->
+          <div class="card pipeline-card">
+            <div class="card-title-row">
+              <h3><i class="fa-solid fa-network-wired text-cyan"></i> স্বয়ংক্রিয় প্রসেসিং পাইপলাইন (Daily Workflow)</h3>
+              <span class="badge blue">Max 3 Videos / Day</span>
+            </div>
+            
+            <div class="pipeline-steps">
+              <div class="p-step">
+                <div class="p-num">১</div>
+                <div class="p-info">
+                  <strong>ড্রাইভ সিলেকশন</strong>
+                  <span>সবচেয়ে পুরোনো অপোস্টকৃত ভিডিও সিলেক্ট হয়</span>
+                </div>
+              </div>
+              <div class="p-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+              <div class="p-step">
+                <div class="p-num">২</div>
+                <div class="p-info">
+                  <strong>Gemini AI বিশ্লেষণ</strong>
+                  <span>ভিজ্যুয়াল সিনারিও ও অডিও কনটেক্সট বুঝে ক্যাপশন</span>
+                </div>
+              </div>
+              <div class="p-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+              <div class="p-step">
+                <div class="p-num">৩</div>
+                <div class="p-info">
+                  <strong>রিভিউ অথবা অটো</strong>
+                  <span>আপনার অনুমোদন নিয়ে অথবা সরাসরি প্রকাশ</span>
+                </div>
+              </div>
+              <div class="p-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+              <div class="p-step">
+                <div class="p-num">৪</div>
+                <div class="p-info">
+                  <strong>মাল্টি-সোশ্যাল পোস্ট</strong>
+                  <span>YouTube, Facebook, Instagram & TikTok</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Published Feed -->
+            <div class="recent-posts-box">
+              <h4><i class="fa-solid fa-bolt text-gold"></i> সম্প্রতি প্রকাশিত রিলস ও ভিডিওসমূহ</h4>
+              <div class="posts-list" id="overviewRecentPosts">
+                <div class="empty-state-mini">এখনও কোনো ভিডিও প্রকাশ করা হয়নি। উপরে "ভিডিও প্রসেস করুন" চাপুন।</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Connected Social Accounts Summary & Live Activity Feed -->
+          <div class="card activity-card">
+            <div class="card-title-row">
+              <h3><i class="fa-solid fa-terminal text-green"></i> লাইভ অ্যাক্টিভিটি কনসোল (Live Logs)</h3>
+              <button class="btn btn-ghost btn-sm" id="btnClearActivityLogs">ক্লিয়ার</button>
+            </div>
+            <div class="activity-feed" id="overviewActivityFeed">
+              <div class="feed-item system"><span class="f-time">[Live]</span> Drive2Social AI ইঞ্জিন সক্রিয় ও প্রস্তুত...</div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 2: GOOGLE DRIVE LIBRARY -->
+      <!-- ============================================================== -->
+      <section class="tab-panel" id="tab-drive">
+        <div class="panel-header">
+          <div>
+            <h2><i class="fa-brands fa-google-drive text-blue"></i> গুগল ড্রাইভ লাইব্রেরি (Drive Videos)</h2>
+            <p class="subtitle">আপনার গুগল ড্রাইভের ফোল্ডার সিঙ্ক করুন, ভিডিও প্রিভিউ দেখুন এবং প্রয়োজনে কোনো ভিডিও বাদ (Exclude) দিন</p>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-primary btn-sm" id="btnSyncDriveFolder">
+              <i class="fa-solid fa-arrows-rotate"></i> ফোল্ডার সিঙ্ক করুন
+            </button>
+          </div>
+        </div>
+
+        <!-- Drive Folder URL Sync Bar -->
+        <div class="card folder-sync-card">
+          <div class="sync-input-group">
+            <div class="input-wrap">
+              <i class="fa-brands fa-google-drive"></i>
+              <input type="text" id="inputDriveFolder" class="form-control" placeholder="গুগল ড্রাইভ ফোল্ডার লিংক বা আইডি দিন (যেমন: https://drive.google.com/drive/folders/1MpjJrnwTjXkVmm9u26-V48SflOWGz5y5)">
+            </div>
+            <button class="btn btn-accent" id="btnSyncNow"><i class="fa-solid fa-cloud-arrow-down"></i> সব ভিডিও লোড করুন</button>
+          </div>
+          <div class="sync-meta-bar" id="syncMetaBar">
+            <span>ফোল্ডার: <strong id="lblActiveFolder">৫০০০+ বাংলা AI ফুড টকিং রিলস্ বান্ডেল</strong></span>
+            <span>মোট ভিডিও: <strong id="lblActiveFolderTotal">০টি</strong></span>
+            <span class="badge green" id="lblFolderAccess">পাবলিক ও এপিআই অ্যাক্সেস প্রস্তুত</span>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="library-toolbar">
+          <div class="search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="librarySearchInput" class="form-control" placeholder="ভিডিও নাম বা আইডি দিয়ে খুঁজুন (যেমন: তরমুজ, গাজর, masstiktok)...">
+          </div>
+          <div class="filter-pills">
+            <button class="pill-btn active" data-filter="all">সবগুলো (<span id="countLibAll">0</span>)</button>
+            <button class="pill-btn" data-filter="active">সক্রিয় কিউ (<span id="countLibActive">0</span>)</button>
+            <button class="pill-btn" data-filter="excluded">বাদ দেওয়া (<span id="countLibExcluded">0</span>)</button>
+          </div>
+        </div>
+
+        <!-- Video Cards Grid -->
+        <div class="video-cards-grid" id="driveVideosGrid">
+          <div class="empty-state">
+            <i class="fa-brands fa-google-drive"></i>
+            <h4>ভিডিও লোড হচ্ছে...</h4>
+            <p>উপরে আপনার গুগল ড্রাইভের লিংক দিয়ে "সব ভিডিও লোড করুন" বাটনে চাপুন।</p>
+          </div>
+        </div>
+
+        <!-- Pagination Bar -->
+        <div class="pagination-bar" id="libPaginationBar">
+          <button class="btn btn-outline btn-sm" id="btnLibPrev"><i class="fa-solid fa-chevron-left"></i> আগের পেজ</button>
+          <span class="page-indicator" id="lblLibPageIndicator">পেজ ১ / ১</span>
+          <button class="btn btn-outline btn-sm" id="btnLibNext">পরের পেজ <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 3: AI CAPTION STUDIO -->
+      <!-- ============================================================== -->
+      <section class="tab-panel" id="tab-studio">
+        <div class="panel-header">
+          <div>
+            <h2><i class="fa-solid fa-wand-magic-sparkles text-purple"></i> Gemini AI ক্যাপশন স্টুডিও (Caption Studio)</h2>
+            <p class="subtitle">ভিডিওর আসল সিনারিও ও বিষয়বস্তু বিশ্লেষণ করে প্ল্যাটফর্ম-স্পেসিফিক টাইটেল, ডেসক্রিপশন ও হ্যাশট্যাগ তৈরি করুন</p>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-outline btn-sm" id="btnRegenerateAiCaption">
+              <i class="fa-solid fa-arrows-rotate"></i> নতুনভাবে জেনারেট করুন
+            </button>
+            <button class="btn btn-primary btn-sm" id="btnApproveAndPublishStudio">
+              <i class="fa-solid fa-paper-plane"></i> অনুমোদন ও প্রকাশ করুন
+            </button>
+          </div>
+        </div>
+
+        <div class="studio-workspace-grid">
+          
+          <!-- Left Column: Video Preview & AI Metadata -->
+          <div class="studio-left">
+            <div class="card video-preview-card">
+              <div class="preview-container">
+                <video id="studioVideoPlayer" controls playsinline></video>
+                <div class="iframe-container" id="studioIframeWrap" style="display: none;">
+                  <iframe id="studioDriveIframe" src="" allow="autoplay; fullscreen"></iframe>
+                </div>
+              </div>
+              <div class="video-meta-info" style="margin-top: 14px;">
+                <h3 id="studioVideoTitle" style="font-size: 15px; color: #fff; margin-bottom: 6px;">ভিডিও নির্বাচন করুন</h3>
+                <div style="font-size: 12px; color: var(--text-muted); display: flex; gap: 12px;">
+                  <span>সাইজ: <strong id="studioVideoSize">0 MB</strong></span>
+                  <span>ডিউরেশন: <strong id="studioVideoDuration">00:30</strong></span>
+                  <span>ফরম্যাট: <strong>9:16 Shorts/Reels</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Video Analysis Summary Card -->
+            <div class="card ai-summary-card">
+              <div class="card-title-row">
+                <h4><i class="fa-solid fa-brain text-purple"></i> Gemini মাল্টিমোডাল বিশ্লেষণ সারসংক্ষেপ</h4>
+                <span class="badge purple" id="studioBadgeModel">Gemini 2.5 Flash</span>
+              </div>
+              
+              <div class="summary-body">
+                <div class="meta-field">
+                  <label>মূল বিষয় (Main Topic):</label>
+                  <p id="studioAiTopic">ভিডিও সিলেক্ট করার পর বিশ্লেষণ দৃশ্যমান হবে...</p>
+                </div>
+                <div class="meta-field">
+                  <label>সিনারিও সারসংক্ষেপ (Summary):</label>
+                  <p id="studioAiSummary">-</p>
+                </div>
+                <div class="meta-field">
+                  <label>ওপেনিং হুক (First 3s Hook):</label>
+                  <div class="hook-box" id="studioAiHook">-</div>
+                </div>
+                <div class="meta-field">
+                  <label>কন্টেন্ট লজিক ব্যাখ্যা (Why this matches):</label>
+                  <p id="studioAiExplanation" style="font-size: 11.5px; color: var(--text-muted);">-</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Platform-Specific Editable Captions -->
+          <div class="studio-right">
+            <div class="card caption-editor-card">
+              
+              <!-- Style & Language Control Bar -->
+              <div class="studio-controls-bar">
+                <div class="control-group">
+                  <label for="selectStudioLanguage"><i class="fa-solid fa-language"></i> ভাষা:</label>
+                  <select id="selectStudioLanguage" class="form-control form-control-sm">
+                    <option value="bn" selected>বাংলা (Bengali)</option>
+                    <option value="en">English (ইংরেজি)</option>
+                    <option value="banglish">Banglish (বাংলা ইন ইংলিশ)</option>
+                  </select>
+                </div>
+
+                <div class="control-group">
+                  <label for="selectStudioStyle"><i class="fa-solid fa-masks-theater"></i> কনটেন্ট স্টাইল:</label>
+                  <select id="selectStudioStyle" class="form-control form-control-sm">
+                    <option value="entertaining" selected>Entertaining (বিনোদনমূলক)</option>
+                    <option value="educational">Educational (তথ্যবহুল ও শিক্ষণীয়)</option>
+                    <option value="storytelling">Storytelling (গল্প বলার স্টাইল)</option>
+                    <option value="professional">Professional (পেশাদার)</option>
+                    <option value="promotional">Promotional (আকর্ষণীয় প্রচার)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Platform Tabs -->
+              <div class="platform-tabs-nav">
+                <button class="ptab-btn active" data-platform="youtube"><i class="fa-brands fa-youtube text-red"></i> YouTube Shorts</button>
+                <button class="ptab-btn" data-platform="facebook"><i class="fa-brands fa-facebook text-blue"></i> Facebook Reels</button>
+                <button class="ptab-btn" data-platform="instagram"><i class="fa-brands fa-instagram text-pink"></i> Instagram Reels</button>
+                <button class="ptab-btn" data-platform="tiktok"><i class="fa-brands fa-tiktok text-cyan"></i> TikTok</button>
+              </div>
+
+              <!-- YouTube Tab Editor -->
+              <div class="platform-editor-panel active" id="editor-youtube">
+                <div class="form-group">
+                  <div class="label-row">
+                    <label>YouTube টাইটেল (Shorts Title):</label>
+                    <span class="char-count" id="countYtTitle">0 / 100</span>
+                  </div>
+                  <input type="text" id="inputYtTitle" class="form-control" placeholder="YouTube Shorts টাইটেল...">
+                </div>
+                <div class="form-group">
+                  <label>ডেসক্রিপশন (Description):</label>
+                  <textarea id="inputYtDesc" class="form-control" rows="5" placeholder="YouTube বিস্তারিত ডেসক্রিপশন..."></textarea>
+                </div>
+                <div class="form-group">
+                  <label>হ্যাশট্যাগ ও কি-ওয়ার্ডস (Tags):</label>
+                  <input type="text" id="inputYtTags" class="form-control" placeholder="#Shorts, #Viral, #BanglaAI">
+                </div>
+              </div>
+
+              <!-- Facebook Tab Editor -->
+              <div class="platform-editor-panel" id="editor-facebook">
+                <div class="form-group">
+                  <div class="label-row">
+                    <label>Facebook Reels ক্যাপশন:</label>
+                    <span class="char-count" id="countFbCaption">0 / 2200</span>
+                  </div>
+                  <textarea id="inputFbCaption" class="form-control" rows="7" placeholder="ফেসবুক পেজে পোস্ট করার ক্যাপশন..."></textarea>
+                </div>
+                <div class="form-group">
+                  <label>হ্যাশট্যাগসমূহ (Hashtags):</label>
+                  <input type="text" id="inputFbTags" class="form-control" placeholder="#FacebookReels, #BanglaReels, #Viral">
+                </div>
+              </div>
+
+              <!-- Instagram Tab Editor -->
+              <div class="platform-editor-panel" id="editor-instagram">
+                <div class="form-group">
+                  <div class="label-row">
+                    <label>Instagram ক্যাপশন ও কল-টু-অ্যাকশন:</label>
+                    <span class="char-count" id="countIgCaption">0 / 2200</span>
+                  </div>
+                  <textarea id="inputIgCaption" class="form-control" rows="7" placeholder="ইনস্টাগ্রাম রিলস ক্যাপশন..."></textarea>
+                </div>
+                <div class="form-group">
+                  <label>ইনস্টাগ্রাম হ্যাশট্যাগ (সর্বোচ্চ ৩০টি):</label>
+                  <input type="text" id="inputIgTags" class="form-control" placeholder="#reelsinstagram, #explorepage, #viral">
+                </div>
+              </div>
+
+              <!-- TikTok Tab Editor -->
+              <div class="platform-editor-panel" id="editor-tiktok">
+                <div class="form-group">
+                  <div class="label-row">
+                    <label>TikTok ক্যাপশন:</label>
+                    <span class="char-count" id="countTtCaption">0 / 2200</span>
+                  </div>
+                  <textarea id="inputTtCaption" class="form-control" rows="6" placeholder="টিকটক রিলসের জন্য সংক্ষিপ্ত ও আকর্ষণীয় ক্যাপশন..."></textarea>
+                </div>
+                <div class="form-group">
+                  <label>ট্রেন্ডিং ট্যাগস:</label>
+                  <input type="text" id="inputTtTags" class="form-control" placeholder="#fyp, #viral, #bangla">
+                </div>
+              </div>
+
+              <!-- Action Bar -->
+              <div class="editor-action-footer">
+                <button class="btn btn-outline" id="btnSaveCaptionsDraft">
+                  <i class="fa-regular fa-floppy-disk"></i> পরিবর্তন সংরক্ষণ করুন
+                </button>
+                <button class="btn btn-primary" id="btnApproveAndPublishFooter">
+                  <i class="fa-solid fa-paper-plane"></i> অনুমোদন ও সোশ্যাল পেজে পাঠান
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 4: PUBLISHING QUEUE & HISTORY -->
+      <!-- ============================================================== -->
+      <section class="tab-panel" id="tab-queue">
+        <div class="panel-header">
+          <div>
+            <h2><i class="fa-solid fa-list-check text-gold"></i> পোস্টিং কিউ ও হিস্ট্রি (Queue & History)</h2>
+            <p class="subtitle">দৈনিক শিডিউল করা ভিডিও, অনুমোদনের অপেক্ষমাণ পোস্ট এবং প্রকাশিত লিংকসমূহ</p>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-primary btn-sm" id="btnQueueTriggerNow">
+              <i class="fa-solid fa-play"></i> শিডিউল ট্রিগার চালান
+            </button>
+          </div>
+        </div>
+
+        <div class="card queue-table-card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ভিডিও / ফাইল</th>
+                  <th>স্ট্যাটাস</th>
+                  <th>প্ল্যাটফর্ম ও লিংক</th>
+                  <th>তারিখ ও সময়</th>
+                  <th>অ্যাকশন</th>
+                </tr>
+              </thead>
+              <tbody id="queueTableBody">
+                <tr>
+                  <td colspan="5" class="table-empty">কোনো সক্রিয় কিউ রেকর্ড নেই।</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 5: SOCIAL MEDIA ACCOUNTS -->
+      <!-- ============================================================== -->
+      <section class="tab-panel" id="tab-accounts">
+        <div class="panel-header">
+          <div>
+            <h2><i class="fa-solid fa-share-nodes text-blue"></i> সোশ্যাল মিডিয়া অ্যাকাউন্ট কানেকশন</h2>
+            <p class="subtitle">আপনার YouTube Channel, Facebook Page, Instagram ও TikTok প্রোফাইল যুক্ত ও পরিচালনা করুন</p>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-outline btn-sm" id="btnConnectGoogleOAuth">
+              <i class="fa-brands fa-google text-red"></i> <span>Google একাউন্ট কানেক্ট (Drive + YouTube)</span>
+            </button>
+            <button class="btn btn-primary btn-sm" id="btnOpenAddAccountModal">
+              <i class="fa-solid fa-plus"></i> নতুন পেজ / অ্যাকাউন্ট যুক্ত করুন
+            </button>
+          </div>
+        </div>
+
+        <!-- Google OAuth Status Banner -->
+        <div class="card" id="googleOAuthCard" style="margin-bottom: 20px; border-left: 4px solid var(--accent-purple); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; padding: 16px 20px;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(234, 67, 53, 0.15); display: flex; align-items: center; justify-content: center; font-size: 20px; color: #ea4335;">
+              <i class="fa-brands fa-google"></i>
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <strong style="color: #fff; font-size: 15px;">Google OAuth 2.0 Integration</strong>
+                <span class="badge" id="badgeGoogleOAuth">Checking...</span>
+              </div>
+              <p style="margin: 0; font-size: 12px; color: var(--text-muted);" id="descGoogleOAuth">
+                Google Drive API v3 ও YouTube Data API v3-এর জন্য স্বয়ংক্রিয় নিরাপদ টোকেন অনুমোদন।
+              </p>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-outline btn-sm" id="btnTestGoogleDriveBanner">
+              <i class="fa-solid fa-satellite-dish"></i> Drive চেক
+            </button>
+            <button class="btn btn-primary btn-sm" id="btnTriggerGoogleAuthAction">
+              <i class="fa-brands fa-google"></i> <span id="lblGoogleAuthBtn">Connect Google</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="accounts-grid" id="accountsGridContainer">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 6: SETTINGS & COST CONTROL -->
+      <!-- ============================================================== -->
+      <section class="tab-panel" id="tab-settings">
+        <div class="panel-header">
+          <div>
+            <h2><i class="fa-solid fa-sliders text-cyan"></i> সিস্টেম সেটিংস ও খরচ নিয়ন্ত্রণ (Settings & Cost Control)</h2>
+            <p class="subtitle">দৈনিক ৩টি ভিডিওর সীমা, টাইমজোন, প্রকাশনা মোড এবং জেমিনি এআই কোটা কনফিগারেশন</p>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-primary btn-sm" id="btnSaveAllSettings">
+              <i class="fa-solid fa-check"></i> সেটিংস সেভ করুন
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          
+          <!-- General Scheduler Settings -->
+          <div class="card settings-card">
+            <h3><i class="fa-solid fa-calendar-check text-blue"></i> শিডিউলার ও দৈনিক সীমা</h3>
+            
+            <div class="form-group">
+              <label for="cfgDailyLimit">প্রতিদিনের ভিডিও সংখ্যা সীমা (Daily Video Limit):</label>
+              <input type="number" id="cfgDailyLimit" class="form-control" value="3" min="1" max="10">
+              <small class="helper-text">ডিফল্ট ৩টি। রাত ১২:০০ টায় নির্ধারিত টাইমজোনে লিমিট স্বয়ংক্রিয়ভাবে রিসেট হয়।</small>
+            </div>
+
+            <div class="form-group">
+              <label for="cfgTimezone">টাইমজোন (Timezone):</label>
+              <select id="cfgTimezone" class="form-control">
+                <option value="Asia/Dhaka" selected>Asia/Dhaka (বাংলাদেশ মান সময় GMT+6)</option>
+                <option value="Asia/Kolkata">Asia/Kolkata (IST GMT+5:30)</option>
+                <option value="UTC">UTC (Universal Time)</option>
+                <option value="America/New_York">America/New_York (EST)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>পোস্টিং মোড (Publishing Mode):</label>
+              <div class="radio-card-group">
+                <label class="radio-card">
+                  <input type="radio" name="cfgMode" value="review" checked>
+                  <div class="rc-content">
+                    <strong><i class="fa-solid fa-shield-halved text-purple"></i> Review Mode (প্রস্তাবিত)</strong>
+                    <span>Gemini ভিডিও বিশ্লেষণ করে ক্যাপশন ড্রাফট রাখবে, আপনার অনুমোদনের পর পোস্ট হবে।</span>
+                  </div>
+                </label>
+                <label class="radio-card">
+                  <input type="radio" name="cfgMode" value="auto">
+                  <div class="rc-content">
+                    <strong><i class="fa-solid fa-bolt text-gold"></i> Automatic Mode (সম্পূর্ণ স্বয়ংক্রিয়)</strong>
+                    <span>ভিডিও বিশ্লেষণ শেষ হওয়ার সাথে সাথেই সরাসরি কানেক্টেড পেজগুলোতে পোস্ট হবে।</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gemini AI & Cost Control -->
+          <div class="card settings-card">
+            <h3><i class="fa-solid fa-brain text-purple"></i> Gemini AI মডেল ও খরচ নিয়ন্ত্রণ</h3>
+
+            <div class="form-group">
+              <label for="cfgGeminiModel">Gemini Multimodal Model:</label>
+              <select id="cfgGeminiModel" class="form-control">
+                <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash (লেটেস্ট ও অত্যন্ত দ্রুত)</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="cfgDailyAiLimit">দৈনিক AI রিকোয়েস্ট সর্বোচ্চ বাজেট সীমা:</label>
+              <input type="number" id="cfgDailyAiLimit" class="form-control" value="50" min="5" max="200">
+              <small class="helper-text">অতিরিক্ত খরচ প্রতিরোধ করতে এই সীমার পর অটোমেটিক সেফ ফলব্যাক ব্যবহার হবে।</small>
+            </div>
+
+            <!-- Cost Tracker Box -->
+            <div class="cost-breakdown-box">
+              <h4><i class="fa-solid fa-receipt text-green"></i> আজকের আনুমানিক খরচ ট্র্যাকার</h4>
+              <div class="cost-stats-grid">
+                <div>
+                  <span>আজকের রিকোয়েস্ট:</span>
+                  <strong id="costStatTodayReq">0 / 50</strong>
+                </div>
+                <div>
+                  <span>আনুমানিক খরচ:</span>
+                  <strong class="text-green" id="costStatTodayUsd">$0.0000</strong>
+                </div>
+              </div>
+              <p class="cost-notice" id="costStatNotice">Gemini Flash ফ্রি-টায়ারে সাধারণ ব্যবহারে কোনো অতিরিক্ত চার্জ প্রযোজ্য নয়।</p>
+            </div>
+
+            <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+              <button class="btn btn-outline btn-sm" id="btnTestGeminiLive" type="button">
+                <i class="fa-solid fa-brain text-purple"></i> Test Gemini Live Health
+              </button>
+              <button class="btn btn-outline btn-sm" id="btnTestDriveLive" type="button">
+                <i class="fa-brands fa-google-drive text-green"></i> Test Google Drive API
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modal: Add Social Account -->
+  <div class="modal-backdrop" id="modalAddAccount" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-plus text-blue"></i> সোশ্যাল মিডিয়া পেজ বা চ্যানেল যুক্ত করুন</h3>
+        <button class="btn-close" id="btnCloseAccountModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>প্ল্যাটফর্ম নির্বাচন করুন:</label>
+          <div class="platform-selector-tabs">
+            <button type="button" class="p-select-btn active" data-p="youtube"><i class="fa-brands fa-youtube text-red"></i> YouTube</button>
+            <button type="button" class="p-select-btn" data-p="facebook"><i class="fa-brands fa-facebook text-blue"></i> Facebook</button>
+            <button type="button" class="p-select-btn" data-p="instagram"><i class="fa-brands fa-instagram text-pink"></i> Instagram</button>
+            <button type="button" class="p-select-btn" data-p="tiktok"><i class="fa-brands fa-tiktok text-cyan"></i> TikTok</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label id="lblAccName">চ্যানেল বা পেজের নাম:</label>
+          <input type="text" id="inputAccName" class="form-control" placeholder="যেমন: Aesthetic Bangla Reels">
+        </div>
+
+        <div class="form-group">
+          <label id="lblAccHandle">হ্যান্ডেল / ইউজারনেম:</label>
+          <input type="text" id="inputAccHandle" class="form-control" placeholder="যেমন: @AestheticBangla">
+        </div>
+
+        <div class="form-group">
+          <label id="lblAccId">প্ল্যাটফর্ম আইডি (ঐচ্ছিক / স্বয়ংক্রিয়):</label>
+          <input type="text" id="inputAccId" class="form-control" placeholder="যেমন: Facebook Page ID / Instagram User ID">
+          <small class="helper-text" id="helpAccId">Facebook ও Instagram-এর জন্য numeric ID দিলে সরাসরি সংযোগ দ্রুততর হয়।</small>
+        </div>
+
+        <div class="form-group">
+          <label>অফিসিয়াল API অ্যাক্সেস টোকেন (Access Token):</label>
+          <input type="password" id="inputAccToken" class="form-control" placeholder="যেমন: Page Access Token, OAuth Bearer Token">
+          <small class="helper-text" style="color: #94a3b8;">সঠিক এবং অনুমোদিত API টোকেন ছাড়া আসল প্ল্যাটফর্মে রিল/ভিডিও প্রকাশ করা সম্ভব নয়। টোকেনগুলো AES-256-GCM দ্বারা সার্ভারে এনক্রিপ্ট থাকবে।</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelAccountModal">বাতিল</button>
+        <button class="btn btn-primary" id="btnSaveAccountModal">কানেক্ট করুন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-stack" id="toastStack"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
