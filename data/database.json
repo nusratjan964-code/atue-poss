@@ -66,18 +66,21 @@
       "handle": "@bangla_aiviral",
       "connected": false,
       "tokenEncrypted": "",
-      "lastVerified": null,
+      "lastVerified": "2026-10-17T12:55:48.141Z",
       "verified": false
     },
     {
       "id": "acc_facebook_1",
       "platform": "facebook",
-      "name": "FACEBOOK Account",
-      "handle": "@facebook",
-      "connected": false,
-      "tokenEncrypted": "",
-      "lastVerified": null,
-      "verified": false
+      "name": "Chiku bd",
+      "handle": "@chikubd",
+      "connected": true,
+      "tokenEncrypted": "63fae1f5d722c3fa2f5951a239877f97:b7c34b6eae81ca201e9f67bffd267185:c8b1ebb3b584c9ad0c1d163e042b5f837cfa9991e0690629890da1da1d00c12a545697aef1b53495ac4f832c29c7666366e2971ea39c09ccf285b04eaedc2e734a8c5eeb6eb8e343142e5f86de5f14203137e03814004290bb0339e4c4a4c50c00abeb53866f30c33581e8f8507e019d242a45bc690bf9c2a935928f7cb98826bf3846e4997351ce3ffac1cd823eec4d844a6df8a5cae7842305d6d4736c8a0d4669fa33c7b4049dc61544858a010e1c3d555cce5554ca96019c065d680c86e970965e19b6cdc6a1c61708c582e8c0fef97435584e26a1b4f9b8c39ff9fe5fbefb352efccfc9199f00ffccd4e481b3669e804db3fe207ab792a867e6",
+      "lastVerified": "2026-10-17T12:59:32.304Z",
+      "verified": true,
+      "channelId": null,
+      "pageId": "1309863422219233",
+      "igUserId": null
     }
   ],
   "driveFiles": {
@@ -2564,6 +2567,34 @@
     }
   },
   "auditLogs": [
+    {
+      "id": "log_1792241947561_blyno",
+      "timestamp": "2026-10-17T12:59:07.561Z",
+      "type": "system",
+      "message": "Drive2Social AI সার্ভার সফলভাবে চালু হয়েছে (Port: 3000)",
+      "meta": {}
+    },
+    {
+      "id": "log_1792241736866_a50wr",
+      "timestamp": "2026-10-17T12:55:36.866Z",
+      "type": "account",
+      "message": "সোশ্যাল একাউন্ট সফলভাবে কানেক্ট করা হয়েছে (FACEBOOK): \"Chiku bd\"",
+      "meta": {}
+    },
+    {
+      "id": "log_1792241438011_8cfw1",
+      "timestamp": "2026-10-17T12:50:38.011Z",
+      "type": "system",
+      "message": "Drive2Social AI সার্ভার সফলভাবে চালু হয়েছে (Port: 3000)",
+      "meta": {}
+    },
+    {
+      "id": "log_1792241282531_2c15c",
+      "timestamp": "2026-10-17T12:48:02.531Z",
+      "type": "system",
+      "message": "Drive2Social AI সার্ভার সফলভাবে চালু হয়েছে (Port: 3000)",
+      "meta": {}
+    },
     {
       "id": "log_1792233404802_11vcv",
       "timestamp": "2026-10-17T10:36:44.802Z",
