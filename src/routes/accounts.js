@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDb, updateDb, addAuditLog } = require('../database');
 const crypto = require('../security/crypto');
 const { getAdapter } = require('../adapters');
+const googleAuth = require('../services/googleAuth');
 
 // List accounts (sanitized, tokens never exposed)
 router.get('/', (req, res) => {
@@ -296,6 +297,71 @@ router.post('/quick-connect', async (req, res) => {
     },
     testResult
   });
+});
+
+// 1-Click YouTube Auto Connect with OAuth / Playground Token
+router.post('/youtube/auto-connect', async (req, res) => {
+  const { token } = req.body;
+  if (!token || !token.trim()) {
+    return res.status(400).json({ success: false, error: 'YouTube Access Token প্রদান করা আবশ্যক।' });
+  }
+
+  const cleanToken = token.trim();
+
+  try {
+    const channel = await googleAuth.fetchYouTubeChannel(cleanToken);
+    if (!channel) {
+      return res.status(404).json({
+        success: false,
+        error: 'এই টোকেনের অধীনে কোনো সক্রিয় YouTube চ্যানেল পাওয়া যায়নি। অনুগ্রহ করে নিশ্চিত করুন আপনার জিমেইলে একটি ইউটিউব চ্যানেল তৈরি করা আছে।'
+      });
+    }
+
+    const encryptedToken = crypto.encrypt(cleanToken);
+    const accountId = 'acc_youtube_1';
+    const channelName = channel.title || 'YouTube Shorts Channel';
+    const channelHandle = channel.customUrl ? (channel.customUrl.startsWith('@') ? channel.customUrl : `@${channel.customUrl}`) : `@${channel.id}`;
+
+    updateDb(draft => {
+      if (!draft.accounts) draft.accounts = [];
+      let acc = draft.accounts.find(a => a.platform === 'youtube');
+      if (!acc) {
+        acc = { id: accountId, platform: 'youtube' };
+        draft.accounts.push(acc);
+      }
+      acc.name = channelName;
+      acc.handle = channelHandle;
+      acc.channelId = channel.id;
+      acc.connected = true;
+      acc.verified = true;
+      acc.tokenEncrypted = encryptedToken;
+      acc.lastVerified = new Date().toISOString();
+
+      if (!draft.settings.googleTokens) draft.settings.googleTokens = {};
+      draft.settings.googleTokens.accessTokenEncrypted = encryptedToken;
+      draft.settings.googleTokens.expiresAt = Date.now() + (3600 * 1000 * 24 * 30);
+      draft.settings.googleAccountName = channelName;
+    });
+
+    addAuditLog('account', `YouTube চ্যানেল ১-ক্লিকে সফলভাবে কানেক্ট হয়েছে: "${channelName}" (${channelHandle})`);
+
+    res.json({
+      success: true,
+      channel: {
+        id: channel.id,
+        title: channel.title,
+        handle: channelHandle,
+        customUrl: channel.customUrl,
+        thumbnail: channel.thumbnail
+      },
+      message: `✅ দারুণ! আপনার "${channel.title}" চ্যানেলটি ১-ক্লিকে সংযুক্ত হয়েছে এবং অটো ভিডিও আপলোডের জন্য পুরোপুরি প্রস্তুত!`
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: `YouTube চ্যানেল সংযোগে সমস্যা: ${err.message}`
+    });
+  }
 });
 
 module.exports = router;

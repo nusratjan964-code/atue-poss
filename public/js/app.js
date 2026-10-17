@@ -758,6 +758,18 @@ function initAccountEvents() {
   const btnQuickYt = document.getElementById('btnQuickConnectYt');
   if (btnQuickYt) btnQuickYt.addEventListener('click', () => handleGoogleConnectRequest());
 
+  const btnOpenYtDirect = document.getElementById('btnOpenYtDiscoverDirect');
+  const btnOpenYtBanner = document.getElementById('btnOpenYtDiscoverBanner');
+  if (btnOpenYtDirect) btnOpenYtDirect.addEventListener('click', () => openModal('modalYouTubeDiscover'));
+  if (btnOpenYtBanner) btnOpenYtBanner.addEventListener('click', () => openModal('modalYouTubeDiscover'));
+
+  const btnCloseYt = document.getElementById('btnCloseYtDiscover');
+  const btnCancelYt = document.getElementById('btnCancelYtDiscover');
+  const btnTriggerYt = document.getElementById('btnTriggerYtDiscover');
+  if (btnCloseYt) btnCloseYt.addEventListener('click', () => closeModal('modalYouTubeDiscover'));
+  if (btnCancelYt) btnCancelYt.addEventListener('click', () => closeModal('modalYouTubeDiscover'));
+  if (btnTriggerYt) btnTriggerYt.addEventListener('click', runYouTubeAutoConnect);
+
   const btnOpenFbDirect = document.getElementById('btnOpenFbDiscoverDirect');
   const btnQuickFb = document.getElementById('btnQuickConnectFb');
   if (btnOpenFbDirect) btnOpenFbDirect.addEventListener('click', () => openModal('modalFacebookDiscover'));
@@ -893,6 +905,125 @@ async function saveGoogleCredentials(launchOAuthAfter = false) {
     }
   } catch (err) {
     showToast(`ত্রুটি: ${err.message}`, 'error');
+  }
+}
+
+async function runYouTubeAutoConnect() {
+  const tokenInput = document.getElementById('inputYtDiscoverToken');
+  const token = (tokenInput ? tokenInput.value : '').trim();
+  const statusBox = document.getElementById('ytDiscoverStatusBox');
+  const triggerBtn = document.getElementById('btnTriggerYtDiscover');
+
+  if (!token) {
+    showToast('অনুগ্রহ করে YouTube Access Token বা Playground Token পেস্ট করুন!', 'warning');
+    return;
+  }
+
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> যাচাই হচ্ছে...';
+  }
+
+  if (statusBox) {
+    statusBox.style.display = 'block';
+    statusBox.innerHTML = '<div style="color: var(--accent-cyan); font-size: 13px;"><i class="fa-solid fa-spinner fa-spin"></i> YouTube Data API v3 দিয়ে আপনার চ্যানেল খোঁজা হচ্ছে...</div>';
+  }
+
+  let channelData = null;
+
+  // 1. Try server endpoint
+  try {
+    const res = await fetch('/api/accounts/youtube/auto-connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const cType = res.headers.get('content-type') || '';
+    if (cType.includes('application/json')) {
+      const data = await res.json();
+      if (data && data.success) {
+        channelData = data;
+      } else if (data && data.error) {
+        throw new Error(data.error);
+      }
+    }
+  } catch (err) {
+    console.warn('[YouTube AutoConnect] Server error, trying direct browser verification:', err.message);
+  }
+
+  // 2. Direct YouTube Data API browser fallback
+  if (!channelData) {
+    try {
+      const ytRes = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&mine=true', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (ytRes.ok) {
+        const ytJson = await ytRes.json();
+        if (ytJson.items && ytJson.items.length > 0) {
+          const ch = ytJson.items[0];
+          const chTitle = ch.snippet?.title || 'YouTube Shorts Channel';
+          const chHandle = ch.snippet?.customUrl ? (ch.snippet.customUrl.startsWith('@') ? ch.snippet.customUrl : `@${ch.snippet.customUrl}`) : `@${ch.id}`;
+
+          // Save to backend via quick-connect
+          const saveRes = await fetch('/api/accounts/quick-connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              platform: 'youtube',
+              name: chTitle,
+              handle: chHandle,
+              channelId: ch.id,
+              token
+            })
+          });
+          const saveData = await saveRes.json();
+          if (saveData.success) {
+            channelData = {
+              success: true,
+              channel: { title: chTitle, handle: chHandle, id: ch.id },
+              message: `✅ দারুণ! আপনার "${chTitle}" চ্যানেলটি সফলভাবে কানেক্ট হয়েছে এবং অটো ভিডিও আপলোডের জন্য পুরোপুরি প্রস্তুত!`
+            };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[YouTube AutoConnect] Direct fetch error:', e.message);
+    }
+  }
+
+  if (channelData && channelData.success) {
+    if (statusBox) {
+      statusBox.innerHTML = `
+        <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-green); border-radius: 8px; padding: 14px; margin-top: 10px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-circle-check text-green" style="font-size: 24px;"></i>
+            <div>
+              <strong style="color: #fff; font-size: 15px;">${escapeHtml(channelData.channel?.title || 'YouTube চ্যানেল')}</strong>
+              <div style="color: var(--accent-cyan); font-size: 12px;">${escapeHtml(channelData.channel?.handle || '')} (Channel ID: ${escapeHtml(channelData.channel?.id || '')})</div>
+              <div style="color: #34d399; font-size: 12px; margin-top: 4px;">${escapeHtml(channelData.message || 'চ্যানেল সফলভাবে কানেক্টেড!')}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    showToast(channelData.message || 'YouTube চ্যানেল সফলভাবে কানেক্ট হয়েছে!', 'success');
+    loadAccounts();
+    loadDashboardStats();
+    setTimeout(() => closeModal('modalYouTubeDiscover'), 2500);
+  } else {
+    if (statusBox) {
+      statusBox.innerHTML = `
+        <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 8px; padding: 12px; margin-top: 10px; color: #fca5a5; font-size: 13px;">
+          <i class="fa-solid fa-circle-xmark"></i> <strong>সংযোগ ব্যর্থ:</strong> টোকেনটি সঠিক নয় বা এর মেয়াদ শেষ। অনুগ্রহ করে Google OAuth Playground থেকে নতুন টোকেন নিন।
+        </div>
+      `;
+    }
+    showToast('YouTube চ্যানেল সংযোগ ব্যর্থ হয়েছে। সঠিক টোকেন দিন।', 'error');
+  }
+
+  if (triggerBtn) {
+    triggerBtn.disabled = false;
+    triggerBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> ১-ক্লিকে কানেক্ট';
   }
 }
 

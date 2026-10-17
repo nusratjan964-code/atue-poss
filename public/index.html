@@ -555,9 +555,14 @@
                 কোনো জটিল কনফিগারেশন ছাড়াই সরাসরি আপনার ফেসবুক পেজ, ইউটিউব চ্যানেল ও ইনস্টাগ্রাম একাউন্ট কানেক্ট করুন
               </p>
             </div>
-            <button class="btn btn-primary btn-sm" id="btnOpenFbDiscoverDirect" style="background: #1877f2; border-color: #1877f2;">
-              <i class="fa-brands fa-facebook"></i> ফেসবুক পেজ অটো-ডিটেক্টর
-            </button>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn btn-primary btn-sm" id="btnOpenYtDiscoverBanner" style="background: #ff0033; border-color: #ff0033;">
+                <i class="fa-brands fa-youtube"></i> ইউটিউব ১-ক্লিক কানেক্টর
+              </button>
+              <button class="btn btn-primary btn-sm" id="btnOpenFbDiscoverDirect" style="background: #1877f2; border-color: #1877f2;">
+                <i class="fa-brands fa-facebook"></i> ফেসবুক পেজ অটো-ডিটেক্টর
+              </button>
+            </div>
           </div>
 
           <div class="quick-hub-grid">
@@ -570,10 +575,15 @@
                 <span class="badge red" id="quickBadgeYt">অসংযুক্ত</span>
               </div>
               <h4>YouTube Shorts</h4>
-              <p id="quickDescYt">অফিসিয়াল Google OAuth দিয়ে ১-ক্লিকে চ্যানেল কানেক্ট করুন।</p>
-              <button class="btn btn-primary btn-sm" id="btnQuickConnectYt" style="width: 100%;">
-                <i class="fa-brands fa-google"></i> ১-ক্লিকে কানেক্ট
-              </button>
+              <p id="quickDescYt">১-ক্লিকে চ্যানেল কানেক্ট করে সরাসরি অটো ভিডিও আপলোড চালু করুন।</p>
+              <div style="display: flex; gap: 8px; flex-direction: column;">
+                <button class="btn btn-primary btn-sm" id="btnOpenYtDiscoverDirect" style="width: 100%; background: #ff0033; border-color: #ff0033;">
+                  <i class="fa-solid fa-bolt"></i> ১-ক্লিকে ফাস্ট কানেক্ট
+                </button>
+                <button class="btn btn-outline btn-xs" id="btnQuickConnectYt" style="width: 100%;">
+                  <i class="fa-brands fa-google"></i> Google ক্লাউড OAuth
+                </button>
+              </div>
             </div>
 
             <!-- 2. Facebook -->
@@ -854,6 +864,59 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" id="btnCancelFbDiscover">বন্ধ করুন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Instant 1-Click YouTube Connect -->
+  <div class="modal-backdrop" id="modalYouTubeDiscover" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-brands fa-youtube text-red"></i> ইনস্ট্যান্ট ১-ক্লিক ইউটিউব চ্যানেল কানেক্টর</h3>
+        <button class="btn-close" id="btnCloseYtDiscover"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Easy Guide for Playground / Token -->
+        <div class="step-guide-box">
+          <div style="font-weight: 700; color: #fff; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <span><i class="fa-solid fa-bolt text-gold"></i> কোনো ক্লাউড জটিলতা ছাড়া ৩০ সেকেন্ডে ইউটিউব কানেক্ট:</span>
+            <a href="https://developers.google.com/oauthplayground/#step1&scopes=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube.upload%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube.readonly" target="_blank" class="btn btn-outline btn-xs" style="color: #ff4d4d; border-color: rgba(239, 68, 68, 0.4); text-decoration: none;">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Google OAuth Playground খুলুন ↗
+            </a>
+          </div>
+          <div class="step-guide-item">
+            <div class="step-num">১</div>
+            <div>উপরের <strong>Google OAuth Playground</strong> লিঙ্কে ক্লিক করুন। (ইউটিউব আপলোড স্কোপ স্বয়ংক্রিয়ভাবে সিলেক্ট করা থাকবে)।</div>
+          </div>
+          <div class="step-guide-item">
+            <div class="step-num">২</div>
+            <div>নীল <strong>"Authorize APIs"</strong> বাটনে ক্লিক করে আপনার ইউটিউব চ্যানেল ওয়ালা জিমেইল সিলেক্ট করে অনুমতি দিন।</div>
+          </div>
+          <div class="step-guide-item">
+            <div class="step-num">৩</div>
+            <div><strong>"Exchange authorization code for tokens"</strong> বাটনে চাপুন এবং প্রাপ্ত <strong>Access token</strong> (ya29... বা Refresh token) নিচে পেস্ট করে ১-ক্লিক কানেক্ট চাপুন!</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="font-weight: 600; color: #fff;">YouTube OAuth / Playground Token (বা Access Token):</label>
+          <div style="position: relative;">
+            <input type="text" id="inputYtDiscoverToken" class="form-control" placeholder="ya29... বা আপনার টোকেনটি এখানে পেস্ট করুন" style="padding-right: 130px; font-family: monospace; font-size: 12px;">
+            <button class="btn btn-primary btn-sm" id="btnTriggerYtDiscover" style="position: absolute; right: 5px; top: 5px; bottom: 5px; background: #ff0033; border-color: #ff0033;">
+              <i class="fa-solid fa-bolt"></i> ১-ক্লিকে কানেক্ট
+            </button>
+          </div>
+          <small class="helper-text" style="color: var(--text-muted); margin-top: 6px; display: block;">
+            💡 টোকেন দেওয়ার সাথে সাথেই আপনার চ্যানেলের নাম, আইডি ও চ্যানেল স্বয়ংক্রিয়ভাবে ডিটেক্ট হবে এবং অটো ভিডিও আপলোড চালু হবে।
+          </small>
+        </div>
+
+        <div id="ytDiscoverStatusBox" style="display: none; margin-top: 15px;"></div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelYtDiscover">বন্ধ করুন</button>
       </div>
     </div>
   </div>
