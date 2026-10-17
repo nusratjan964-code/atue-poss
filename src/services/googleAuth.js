@@ -59,7 +59,7 @@ function getAuthUrl(state = '', req = null, customRedirect = null) {
     response_type: 'code',
     scope: REQUIRED_SCOPES.join(' '),
     access_type: 'offline',
-    prompt: 'consent',
+    prompt: 'select_account consent',
     include_granted_scopes: 'true'
   });
 
@@ -146,13 +146,20 @@ async function exchangeCodeForTokens(code, req = null, customRedirect = null) {
     // Automatically sync YouTube account if channel found
     if (ytChannel) {
       if (!draft.accounts) draft.accounts = [];
-      let ytAcc = draft.accounts.find(a => a.platform === 'youtube');
+      const accountId = `acc_yt_${ytChannel.id}`;
+      let ytAcc = draft.accounts.find(a => a.channelId === ytChannel.id || a.id === accountId);
       if (!ytAcc) {
-        ytAcc = { id: 'acc_yt_1', platform: 'youtube' };
-        draft.accounts.push(ytAcc);
+        // If an old placeholder youtube account exists without channelId, use it
+        ytAcc = draft.accounts.find(a => a.platform === 'youtube' && !a.channelId);
+        if (ytAcc) {
+          ytAcc.id = accountId;
+        } else {
+          ytAcc = { id: accountId, platform: 'youtube' };
+          draft.accounts.push(ytAcc);
+        }
       }
       ytAcc.name = ytChannel.title;
-      ytAcc.handle = ytChannel.customUrl ? `@${ytChannel.customUrl.replace(/^@/, '')}` : `@${ytChannel.id}`;
+      ytAcc.handle = ytChannel.customUrl ? (ytChannel.customUrl.startsWith('@') ? ytChannel.customUrl : `@${ytChannel.customUrl}`) : `@${ytChannel.id}`;
       ytAcc.channelId = ytChannel.id;
       ytAcc.connected = true;
       ytAcc.tokenEncrypted = tokenPayload.accessTokenEncrypted;

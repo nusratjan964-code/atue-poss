@@ -1433,9 +1433,14 @@ function renderAccountsGrid(accounts = []) {
           <button class="btn btn-outline btn-sm" style="flex: 1;" onclick="testAccountConnection('${a.id}')">
             <i class="fa-solid fa-satellite-dish"></i> কানেকশন চেক
           </button>
-          ${a.platform === 'youtube' && !a.hasToken ? `
-            <button class="btn btn-primary btn-sm" onclick="triggerGoogleOAuthFlow()" title="Google OAuth দিয়ে চ্যানেল কানেক্ট করুন">
-              <i class="fa-brands fa-google"></i> OAuth
+          ${a.hasToken ? `
+            <button class="btn btn-outline btn-sm" onclick="toggleAccountStatus('${a.id}')" title="${a.connected ? 'পজ / নিষ্ক্রিয় করুন' : 'সক্রিয় করুন'}" style="color: ${a.connected ? '#34d399' : '#94a3b8'}; border-color: ${a.connected ? 'rgba(52, 211, 153, 0.4)' : 'rgba(255,255,255,0.1)'};">
+              <i class="fa-solid ${a.connected ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> ${a.connected ? 'সক্রিয়' : 'পজ'}
+            </button>
+          ` : ''}
+          ${a.platform === 'youtube' ? `
+            <button class="btn btn-primary btn-sm" onclick="triggerGoogleOAuthFlow()" title="অন্য ইউটিউব চ্যানেলে সুইচ করুন বা নতুন চ্যানেল যুক্ত করুন" style="background: #ff0033; border-color: #ff0033;">
+              <i class="fa-solid fa-repeat"></i> চ্যানেল সুইচ
             </button>
           ` : ''}
           <button class="btn btn-ghost btn-sm" onclick="deleteAccount('${a.id}')" title="মুছে ফেলুন">
@@ -1445,6 +1450,21 @@ function renderAccountsGrid(accounts = []) {
       </div>
     `;
   }).join('');
+}
+
+async function toggleAccountStatus(id) {
+  try {
+    const res = await fetch(`/api/accounts/toggle/${id}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || 'স্ট্যাটাস আপডেট হয়েছে', 'success');
+      loadAccounts();
+    } else {
+      showToast(data.error || 'আপডেট করতে ব্যর্থ', 'error');
+    }
+  } catch (e) {
+    showToast(`ত্রুটি: ${e.message}`, 'error');
+  }
 }
 
 async function saveNewAccount() {

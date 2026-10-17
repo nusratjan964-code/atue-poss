@@ -84,6 +84,26 @@ router.delete('/:id', (req, res) => {
   res.json({ success: true, message: 'Account removed.' });
 });
 
+// Toggle account active status (Enable / Pause)
+router.post('/toggle/:id', (req, res) => {
+  const { id } = req.params;
+  const db = getDb();
+  const acc = (db.accounts || []).find(a => a.id === id);
+  if (!acc) return res.status(404).json({ success: false, error: 'Account not found' });
+
+  let newStatus = false;
+  updateDb(draft => {
+    const target = draft.accounts.find(a => a.id === id);
+    if (target) {
+      target.connected = !target.connected;
+      newStatus = target.connected;
+    }
+  });
+
+  addAuditLog('account', `অ্যাকাউন্ট স্ট্যাটাস পরিবর্তন: "${acc.name}" (${newStatus ? 'সক্রিয়' : 'নিষ্ক্রিয়'})`);
+  res.json({ success: true, connected: newStatus, message: `স্ট্যাটাস সফলভাবে ${newStatus ? 'সক্রিয়' : 'পজ'} করা হয়েছে!` });
+});
+
 // Test connection live with provider API
 router.post('/test/:id', async (req, res) => {
   const { id } = req.params;
