@@ -84,8 +84,8 @@ app.get('/api/drive-thumb', (req, res) => {
 // Favicon handler
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// Single Page Application Fallback (Express 5 compatible)
-app.use((req, res) => {
+// Single Page Application Fallback
+app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ success: false, error: `API route ${req.method} ${req.path} not found` });
   }
@@ -95,6 +95,14 @@ app.use((req, res) => {
       res.status(err.status || 404).end();
     }
   });
+});
+
+// Global Error Handler (Always return JSON for API requests)
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ success: false, error: 'Invalid JSON request payload format.' });
+  }
+  res.status(err.status || 500).json({ success: false, error: err.message || 'Internal Server Error' });
 });
 
 // Start Server & Background Scheduler
