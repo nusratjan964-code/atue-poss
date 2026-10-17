@@ -48,6 +48,9 @@
     </div>
 
     <div class="header-right">
+      <button class="btn btn-outline btn-sm" id="btnOpenInstantTestUpload" style="background: rgba(168, 85, 247, 0.15); border-color: var(--accent-purple); color: #c084fc;" title="Google Drive লিংক দিয়ে টেস্ট ভিডিও পোস্ট করুন">
+        <i class="fa-solid fa-paper-plane"></i> <span>টেস্ট ড্রাইভ পোস্ট</span>
+      </button>
       <button class="btn btn-primary btn-sm" id="btnQuickTrigger" title="এখনই পরবর্তী ভিডিও প্রসেস করুন">
         <i class="fa-solid fa-bolt"></i> <span>ভিডিও প্রসেস করুন</span>
       </button>
@@ -114,6 +117,9 @@
             <p class="subtitle">Google Drive থেকে ভিডিও নির্বাচন, Gemini AI কন্টেন্ট বিশ্লেষণ এবং সোশ্যাল পোস্টের সামগ্রিক চিত্র</p>
           </div>
           <div class="panel-actions">
+            <button class="btn btn-primary btn-sm" id="btnOpenInstantUploadOverview" style="background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%); border: none;">
+              <i class="fa-solid fa-paper-plane"></i> <span>টেস্ট ড্রাইভ পোস্ট</span>
+            </button>
             <span class="live-tag"><span class="pulse-dot"></span> লাইভ অটোমেশন সক্রিয়</span>
           </div>
         </div>
@@ -917,6 +923,66 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost" id="btnCancelYtDiscover">বন্ধ করুন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Instant Drive Video Test Uploader -->
+  <div class="modal-backdrop" id="modalInstantTestUpload" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-paper-plane text-purple"></i> ইনস্ট্যান্ট টেস্ট ভিডিও আপলোডার (Drive ➔ Social)</h3>
+        <button class="btn-close" id="btnCloseInstantUpload"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        
+        <div class="step-guide-box" style="margin-bottom: 16px;">
+          <div style="font-weight: 700; color: #fff; margin-bottom: 6px;">
+            <i class="fa-solid fa-circle-info text-cyan"></i> এটি কীভাবে কাজ করে:
+          </div>
+          <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.6;">
+            আপনার Google Drive-এর যেকোনো ভিডিওর লিংক নিচে পেস্ট করুন। সিস্টেম ড্রাইভ থেকে স্বয়ংক্রিয়ভাবে ভিডিওটি রিড করবে, Gemini AI দিয়ে আকর্ষণীয় বাংলা ক্যাপশন ও ভাইরাল হ্যাশট্যাগ তৈরি করবে এবং সাথে সাথে আপনার কানেক্টেড <strong>Facebook Page (Chiku bd)</strong> ও <strong>YouTube Shorts (chiku bd)</strong> চ্যানেলে পোস্ট করে দেবে!
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="font-weight: 600; color: #fff;">Google Drive ভিডিও বা ফোল্ডার লিংক (বা ফাইল ID):</label>
+          <input type="text" id="inputInstantDriveUrl" class="form-control" placeholder="https://drive.google.com/file/d/1.../view বা ফোল্ডার লিংক" style="font-family: monospace; font-size: 13px;">
+          <small class="helper-text" style="color: var(--text-muted); margin-top: 4px; display: block;">
+            💡 ড্রাইভ ফাইলের "Share" অপশনে গিয়ে "Anyone with the link" ভিউয়ার অনুমতি দেওয়া থাকতে হবে।
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label style="font-weight: 600; color: #fff;">কাস্টম শিরোনাম / বিষয়বস্তু (ঐচ্ছিক):</label>
+          <input type="text" id="inputInstantCustomTitle" class="form-control" placeholder="যেমন: মুখরোচক চিকেন বিরিয়ানি রেসিপি (খালি রাখলে AI ভিডিও দেখে টাইটেল দেবে)">
+        </div>
+
+        <div class="form-group">
+          <label style="font-weight: 600; color: #fff;">যে প্ল্যাটফর্মগুলোতে পোস্ট হবে:</label>
+          <div style="display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 8px; color: #fff; cursor: pointer; background: rgba(255, 0, 51, 0.1); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255, 0, 51, 0.3);">
+              <input type="checkbox" id="chkInstantYoutube" checked>
+              <i class="fa-brands fa-youtube text-red" style="font-size: 18px;"></i>
+              <span>YouTube Shorts (<strong>chiku bd</strong>)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; color: #fff; cursor: pointer; background: rgba(24, 119, 242, 0.1); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(24, 119, 242, 0.3);">
+              <input type="checkbox" id="chkInstantFacebook" checked>
+              <i class="fa-brands fa-facebook text-blue" style="font-size: 18px;"></i>
+              <span>Facebook Reels (<strong>Chiku bd</strong>)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Live Status / Result Container -->
+        <div id="instantUploadStatusBox" style="display: none; margin-top: 16px;"></div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelInstantUpload">বাতিল</button>
+        <button class="btn btn-primary" id="btnTriggerInstantUpload" style="background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%); border: none;">
+          <i class="fa-solid fa-paper-plane"></i> সরাসরি ড্রাইভ থেকে ফেচ ও পোস্ট করুন 🚀
+        </button>
       </div>
     </div>
   </div>

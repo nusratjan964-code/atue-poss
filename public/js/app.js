@@ -98,6 +98,19 @@ function initDashboardEvents() {
       if (feed) feed.innerHTML = '<div class="feed-item system"><span class="f-time">[Live]</span> লগ ক্লিয়ার করা হয়েছে...</div>';
     });
   }
+
+  // Instant Test Drive Upload Modal Triggers
+  const btnInstantHdr = document.getElementById('btnOpenInstantTestUpload');
+  const btnInstantOv = document.getElementById('btnOpenInstantUploadOverview');
+  const btnCloseInstant = document.getElementById('btnCloseInstantUpload');
+  const btnCancelInstant = document.getElementById('btnCancelInstantUpload');
+  const btnTriggerInstant = document.getElementById('btnTriggerInstantUpload');
+
+  if (btnInstantHdr) btnInstantHdr.addEventListener('click', () => openModal('modalInstantTestUpload'));
+  if (btnInstantOv) btnInstantOv.addEventListener('click', () => openModal('modalInstantTestUpload'));
+  if (btnCloseInstant) btnCloseInstant.addEventListener('click', () => closeModal('modalInstantTestUpload'));
+  if (btnCancelInstant) btnCancelInstant.addEventListener('click', () => closeModal('modalInstantTestUpload'));
+  if (btnTriggerInstant) btnTriggerInstant.addEventListener('click', runInstantDriveUpload);
 }
 
 async function loadDashboardStats() {
@@ -242,6 +255,127 @@ async function triggerQuickProcess() {
     btn.innerHTML = origText;
     btn.disabled = false;
     showToast(`ত্রুটি: ${err.message}`, 'error');
+  }
+}
+
+async function runInstantDriveUpload() {
+  const driveUrl = (document.getElementById('inputInstantDriveUrl')?.value || '').trim();
+  const customTitle = (document.getElementById('inputInstantCustomTitle')?.value || '').trim();
+  const chkYt = document.getElementById('chkInstantYoutube')?.checked;
+  const chkFb = document.getElementById('chkInstantFacebook')?.checked;
+  const statusBox = document.getElementById('instantUploadStatusBox');
+  const triggerBtn = document.getElementById('btnTriggerInstantUpload');
+
+  if (!driveUrl) {
+    showToast('অনুগ্রহ করে Google Drive ভিডিও বা ফোল্ডার লিংক দিন!', 'warning');
+    return;
+  }
+
+  const platforms = [];
+  if (chkYt) platforms.push('youtube');
+  if (chkFb) platforms.push('facebook');
+
+  if (platforms.length === 0) {
+    showToast('কমপক্ষে একটি প্ল্যাটফর্ম নির্বাচন করুন!', 'warning');
+    return;
+  }
+
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> প্রসেসিং ও আপলোড চলছে...';
+  }
+
+  if (statusBox) {
+    statusBox.style.display = 'block';
+    statusBox.innerHTML = `
+      <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid var(--accent-purple); border-radius: 8px; padding: 14px; font-size: 13px;">
+        <div style="color: #c084fc; font-weight: 600; margin-bottom: 8px;">
+          <i class="fa-solid fa-spinner fa-spin"></i> ড্রাইভ থেকে ভিডিও বিশ্লেষণ ও আপলোড হচ্ছে...
+        </div>
+        <div style="color: var(--text-muted); font-size: 12px; line-height: 1.6;">
+          ১. Google Drive থেকে ভিডিও ফাইল ও মেটাডাটা রিড করা হচ্ছে...<br>
+          ২. Gemini AI দিয়ে আকর্ষণীয় ক্যাপশন ও ভাইরাল হ্যাশট্যাগ তৈরি হচ্ছে...<br>
+          ৩. সোশ্যাল চ্যানেলে রিলস/শর্টস হিসেবে সরাসরি আপলোড শুরু হয়েছে...
+        </div>
+      </div>
+    `;
+  }
+
+  try {
+    const res = await fetch('/api/queue/instant-publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driveUrl, customTitle, platforms })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      let resultsHtml = '';
+      if (data.results) {
+        for (const [p, resObj] of Object.entries(data.results)) {
+          const icon = p === 'youtube' ? 'fa-brands fa-youtube text-red' : 'fa-brands fa-facebook text-blue';
+          const pName = p === 'youtube' ? 'YouTube Shorts' : 'Facebook Reels';
+          const link = resObj.postUrl ? `<a href="${resObj.postUrl}" target="_blank" style="color: var(--accent-cyan); text-decoration: underline; margin-left: 8px;"><i class="fa-solid fa-arrow-up-right-from-square"></i> পোস্ট দেখুন ↗</a>` : '';
+          resultsHtml += `
+            <div style="margin-top: 6px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <span><i class="${icon}"></i> <strong>${pName} (${escapeHtml(resObj.accountName || '')}):</strong> ${escapeHtml(resObj.message || 'আপলোড সফল')}</span>
+              ${link}
+            </div>
+          `;
+        }
+      }
+
+      let errorHtml = '';
+      if (data.errors && Object.keys(data.errors).length > 0) {
+        for (const [p, err] of Object.entries(data.errors)) {
+          errorHtml += `<div style="color: #fca5a5; font-size: 12px; margin-top: 4px;">⚠️ ${p.toUpperCase()}: ${escapeHtml(err)}</div>`;
+        }
+      }
+
+      if (statusBox) {
+        statusBox.innerHTML = `
+          <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-green); border-radius: 8px; padding: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <i class="fa-solid fa-circle-check text-green" style="font-size: 24px;"></i>
+              <strong style="color: #fff; font-size: 15px;">ভিডিও সফলভাবে সোশ্যাল প্ল্যাটফর্মে পোস্ট হয়েছে!</strong>
+            </div>
+            <div style="font-size: 13px; color: #fff;">
+              ${resultsHtml}
+            </div>
+            ${errorHtml}
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: var(--text-muted);">
+              <strong>ক্যাপশন:</strong> ${escapeHtml(data.captions?.facebook?.caption || data.captions?.youtube?.title || '')}
+            </div>
+          </div>
+        `;
+      }
+      showToast('ভিডিও সফলভাবে সোশ্যাল প্ল্যাটফর্মে পোস্ট হয়েছে!', 'success');
+      loadDashboardStats();
+      loadQueue();
+    } else {
+      if (statusBox) {
+        statusBox.innerHTML = `
+          <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 8px; padding: 14px; color: #fca5a5; font-size: 13px;">
+            <i class="fa-solid fa-triangle-exclamation"></i> <strong>আপলোড ব্যর্থ:</strong> ${escapeHtml(data.error || 'ভিডিও প্রসেসিং করতে সমস্যা হয়েছে।')}
+          </div>
+        `;
+      }
+      showToast(data.error || 'আপলোড ব্যর্থ হয়েছে', 'error');
+    }
+  } catch (err) {
+    if (statusBox) {
+      statusBox.innerHTML = `
+        <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 8px; padding: 14px; color: #fca5a5; font-size: 13px;">
+          <i class="fa-solid fa-triangle-exclamation"></i> <strong>নেটওয়ার্ক এরর:</strong> ${escapeHtml(err.message)}
+        </div>
+      `;
+    }
+    showToast(`ত্রুটি: ${err.message}`, 'error');
+  } finally {
+    if (triggerBtn) {
+      triggerBtn.disabled = false;
+      triggerBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> সরাসরি ড্রাইভ থেকে ফেচ ও পোস্ট করুন 🚀';
+    }
   }
 }
 
