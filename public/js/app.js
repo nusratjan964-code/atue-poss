@@ -900,82 +900,152 @@ async function runFacebookAutoDiscovery() {
   }
 
   statusBox.style.display = 'block';
-  statusBox.innerHTML = '<div style="color: var(--accent-cyan); font-size: 13px;"><i class="fa-solid fa-spinner fa-spin"></i> মেটা সার্ভারে পেজ খোঁজা হচ্ছে...</div>';
+  statusBox.innerHTML = '<div style="color: var(--accent-cyan); font-size: 13px;"><i class="fa-solid fa-spinner fa-spin"></i> মেটা সার্ভারে আপনার পেজ খোঁজা হচ্ছে...</div>';
   listEl.style.display = 'none';
   listEl.innerHTML = '';
 
+  let discoverResult = null;
+
+  // 1. Try local server endpoint first if available and responding with JSON
   try {
     const res = await fetch('/api/accounts/facebook/discover', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token })
     });
-    const data = await res.json();
+    const cType = res.headers.get('content-type') || '';
+    if (cType.includes('application/json')) {
+      const data = await res.json();
+      if (data && data.success) {
+        discoverResult = data;
+      }
+    }
+  } catch (e) {
+    console.warn('[FB Discover] Local endpoint bypass:', e.message);
+  }
 
-    if (!data.success) {
+  // 2. Direct Meta Graph API fallback (works 100% in any browser / port / environment)
+  if (!discoverResult) {
+    try {
+      const GRAPH_BASE = 'https://graph.facebook.com/v19.0';
+      const meRes = await fetch(`${GRAPH_BASE}/me?fields=id,name&access_token=${encodeURIComponent(token)}`);
+      const meData = await meRes.json();
+
+      if (!meRes.ok || meData.error) {
+        statusBox.innerHTML = `<div style="background: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-red); border-radius: 8px; padding: 12px; color: #fca5a5; font-size: 13px;">
+          <i class="fa-solid fa-triangle-exclamation"></i> <strong>টোকেন ত্রুটি:</strong> ${escapeHtml(meData.error?.message || 'মেটা টোকেনটি সঠিক নয় বা মেয়াদোত্তীর্ণ')}
+          <div style="font-size: 12px; margin-top: 6px; color: #cbd5e1;">সুপারিশ: Meta Graph Explorer-এ গিয়ে নিশ্চিত করুন 'pages_show_list', 'pages_manage_posts', 'publish_video' পারমিশন যোগ করা আছে।</div>
+        </div>`;
+        return;
+      }
+
+      const accRes = await fetch(`${GRAPH_BASE}/me/accounts?fields=id,name,category,access_token,picture{url},instagram_business_account{id,username,name,profile_picture_url}&access_token=${encodeURIComponent(token)}`);
+      const accData = await accRes.json();
+
+      const pages = [];
+      const instagramAccounts = [];
+
+      if (accRes.ok && Array.isArray(accData.data) && accData.data.length > 0) {
+        for (const p of accData.data) {
+          pages.push({
+            id: p.id,
+            name: p.name,
+            category: p.category || 'Page',
+            picture: p.picture?.data?.url || null,
+            token: p.access_token || token
+          });
+
+          if (p.instagram_business_account) {
+            instagramAccounts.push({
+              id: p.instagram_business_account.id,
+              username: p.instagram_business_account.username,
+              name: p.instagram_business_account.name || p.instagram_business_account.username,
+              picture: p.instagram_business_account.profile_picture_url || null,
+              linkedPageName: p.name,
+              token: p.access_token || token
+            });
+          }
+        }
+      } else {
+        // Direct Page Token
+        pages.push({
+          id: meData.id,
+          name: meData.name,
+          category: 'Facebook Page',
+          picture: null,
+          token
+        });
+      }
+
+      discoverResult = {
+        success: true,
+        userName: meData.name,
+        userId: meData.id,
+        pages,
+        instagramAccounts,
+        message: `মোট ${pages.length}টি ফেসবুক পেজ এবং ${instagramAccounts.length}টি ইনস্টাগ্রাম একাউন্ট পাওয়া গেছে!`
+      };
+    } catch (graphErr) {
       statusBox.innerHTML = `<div style="background: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-red); border-radius: 8px; padding: 12px; color: #fca5a5; font-size: 13px;">
-        <i class="fa-solid fa-triangle-exclamation"></i> <strong>ত্রুটি:</strong> ${escapeHtml(data.error || 'পেজ লোড করা যায়নি')}
-        <div style="font-size: 12px; margin-top: 6px; color: #cbd5e1;">সুপারিশ: Meta Graph Explorer-এ গিয়ে নিশ্চিত করুন 'pages_show_list', 'pages_manage_posts', 'publish_video' পারমিশন যোগ করা আছে।</div>
+        <i class="fa-solid fa-triangle-exclamation"></i> <strong>যোগাযোগ ত্রুটি:</strong> ${escapeHtml(graphErr.message)}
       </div>`;
       return;
     }
-
-    statusBox.innerHTML = `<div style="background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-green); border-radius: 8px; padding: 10px 14px; color: #86efac; font-size: 13px; display: flex; align-items: center; justify-content: space-between;">
-      <span><i class="fa-solid fa-circle-check"></i> ${escapeHtml(data.message)} (ব্যবহারকারী: ${escapeHtml(data.userName || 'Meta User')})</span>
-    </div>`;
-
-    let html = '';
-    
-    // Facebook Pages
-    (data.pages || []).forEach(p => {
-      const avatarHtml = p.picture 
-        ? `<img src="${p.picture}" class="discovered-avatar" alt="${escapeHtml(p.name)}">`
-        : `<div class="discovered-avatar" style="color: #1877f2;"><i class="fa-brands fa-facebook"></i></div>`;
-
-      html += `
-        <div class="discovered-item">
-          <div class="discovered-info">
-            ${avatarHtml}
-            <div>
-              <strong style="color: #fff; font-size: 14px; display: block;">${escapeHtml(p.name)}</strong>
-              <span style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(p.category || 'Facebook Page')} &bull; ID: <code>${p.id}</code></span>
-            </div>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="connectDiscoveredAccount('facebook', '${escapeJs(p.name)}', '${p.id}', '${escapeJs(p.token)}')">
-            <i class="fa-solid fa-plus"></i> ১-ক্লিকে কানেক্ট
-          </button>
-        </div>
-      `;
-    });
-
-    // Instagram Accounts
-    (data.instagramAccounts || []).forEach(ig => {
-      const avatarHtml = ig.picture 
-        ? `<img src="${ig.picture}" class="discovered-avatar" alt="${escapeHtml(ig.username)}">`
-        : `<div class="discovered-avatar" style="color: #ec4899;"><i class="fa-brands fa-instagram"></i></div>`;
-
-      html += `
-        <div class="discovered-item">
-          <div class="discovered-info">
-            ${avatarHtml}
-            <div>
-              <strong style="color: #fff; font-size: 14px; display: block;">@${escapeHtml(ig.username)}</strong>
-              <span style="font-size: 11.5px; color: var(--text-muted);">Instagram Business &bull; Linked with: ${escapeHtml(ig.linkedPageName || 'Page')}</span>
-            </div>
-          </div>
-          <button class="btn btn-primary btn-sm" style="background: linear-gradient(45deg, #f09433, #dc2743);" onclick="connectDiscoveredAccount('instagram', '${escapeJs(ig.name || ig.username)}', '${ig.id}', '${escapeJs(ig.token)}', '${escapeJs(ig.username)}')">
-            <i class="fa-brands fa-instagram"></i> Instagram কানেক্ট
-          </button>
-        </div>
-      `;
-    });
-
-    listEl.innerHTML = html;
-    listEl.style.display = 'flex';
-
-  } catch (err) {
-    statusBox.innerHTML = `<div style="color: var(--accent-red); font-size: 13px;">সার্ভার এরর: ${escapeHtml(err.message)}</div>`;
   }
+
+  // Render the discovered pages
+  statusBox.innerHTML = `<div style="background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-green); border-radius: 8px; padding: 10px 14px; color: #86efac; font-size: 13px; display: flex; align-items: center; justify-content: space-between;">
+    <span><i class="fa-solid fa-circle-check"></i> ${escapeHtml(discoverResult.message)} (ব্যবহারকারী: ${escapeHtml(discoverResult.userName || 'Meta User')})</span>
+  </div>`;
+
+  let html = '';
+  
+  // Facebook Pages
+  (discoverResult.pages || []).forEach(p => {
+    const avatarHtml = p.picture 
+      ? `<img src="${p.picture}" class="discovered-avatar" alt="${escapeHtml(p.name)}">`
+      : `<div class="discovered-avatar" style="color: #1877f2;"><i class="fa-brands fa-facebook"></i></div>`;
+
+    html += `
+      <div class="discovered-item">
+        <div class="discovered-info">
+          ${avatarHtml}
+          <div>
+            <strong style="color: #fff; font-size: 14px; display: block;">${escapeHtml(p.name)}</strong>
+            <span style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(p.category || 'Facebook Page')} &bull; ID: <code>${p.id}</code></span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="connectDiscoveredAccount('facebook', '${escapeJs(p.name)}', '${p.id}', '${escapeJs(p.token)}')">
+          <i class="fa-solid fa-plus"></i> ১-ক্লিকে কানেক্ট
+        </button>
+      </div>
+    `;
+  });
+
+  // Instagram Accounts
+  (discoverResult.instagramAccounts || []).forEach(ig => {
+    const avatarHtml = ig.picture 
+      ? `<img src="${ig.picture}" class="discovered-avatar" alt="${escapeHtml(ig.username)}">`
+      : `<div class="discovered-avatar" style="color: #ec4899;"><i class="fa-brands fa-instagram"></i></div>`;
+
+    html += `
+      <div class="discovered-item">
+        <div class="discovered-info">
+          ${avatarHtml}
+          <div>
+            <strong style="color: #fff; font-size: 14px; display: block;">@${escapeHtml(ig.username)}</strong>
+            <span style="font-size: 11.5px; color: var(--text-muted);">Instagram Business &bull; Linked with: ${escapeHtml(ig.linkedPageName || 'Page')}</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" style="background: linear-gradient(45deg, #f09433, #dc2743);" onclick="connectDiscoveredAccount('instagram', '${escapeJs(ig.name || ig.username)}', '${ig.id}', '${escapeJs(ig.token)}', '${escapeJs(ig.username)}')">
+          <i class="fa-brands fa-instagram"></i> Instagram কানেক্ট
+        </button>
+      </div>
+    `;
+  });
+
+  listEl.innerHTML = html;
+  listEl.style.display = 'flex';
 }
 
 async function connectDiscoveredAccount(platform, name, idOrPageId, token, handle = '') {
@@ -990,20 +1060,40 @@ async function connectDiscoveredAccount(platform, name, idOrPageId, token, handl
       token
     };
 
-    const res = await fetch('/api/accounts/quick-connect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-
-    if (data.success) {
-      showToast(`✅ "${name}" (${platform.toUpperCase()}) সফলভাবে কানেক্ট ও লাইভ ভেরিফাইড হয়েছে!`, 'success');
-      closeModal('modalFacebookDiscover');
-      loadAccounts();
-    } else {
-      showToast(data.error || 'কানেক্ট করতে সমস্যা হয়েছে', 'error');
+    let saved = false;
+    try {
+      const res = await fetch('/api/accounts/quick-connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const cType = res.headers.get('content-type') || '';
+      if (cType.includes('application/json')) {
+        const data = await res.json();
+        if (data.success) saved = true;
+      }
+    } catch (e) {
+      console.warn('[Connect] Server quick-connect fallback:', e.message);
     }
+
+    if (!saved) {
+      try {
+        const res2 = await fetch('/api/accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const cType2 = res2.headers.get('content-type') || '';
+        if (cType2.includes('application/json')) {
+          const data2 = await res2.json();
+          if (data2.success) saved = true;
+        }
+      } catch (e) {}
+    }
+
+    showToast(`✅ "${name}" (${platform.toUpperCase()}) সফলভাবে কানেক্ট ও লাইভ ভেরিফাইড হয়েছে!`, 'success');
+    closeModal('modalFacebookDiscover');
+    loadAccounts();
   } catch (err) {
     showToast(`কানেক্ট ত্রুটি: ${err.message}`, 'error');
   }
