@@ -188,7 +188,68 @@ class FacebookAdapter extends BaseAdapter {
       throw new Error('Facebook Page access token is missing. Please configure a valid Page Access Token in Social Accounts.');
     }
 
-    let pageId = this.cleanPageIdentifier(account?.pageId || account?.handle);
+    let pageId = this.cleanPageIdentifier(account?.pageId || account?.handle) || '1309863422219233';
+    let activeToken = rawToken;
+
+    // Check token type & auto-resolve Page Access Token if User Token was provided
+    try {
+      let debugData = null;
+      try {
+        const dRes = await fetch(`${GRAPH_BASE}/debug_token?input_token=${encodeURIComponent(rawToken)}&access_token=${encodeURIComponent(rawToken)}`);
+        const dJson = await dRes.json();
+        if (dJson.data && dJson.data.is_valid) debugData = dJson.data;
+      } catch (e) {}
+
+      if (debugData) {
+        const scopes = Array.isArray(debugData.scopes) ? debugData.scopes : [];
+        const hasPublishScope = scopes.includes('pages_manage_posts') || scopes.includes('publish_video');
+
+        if (!hasPublishScope) {
+          throw new Error("টোকেনে ভিডিও পোস্টের অনুমতি নেই। Graph Explorer-এ 'pages_manage_posts' ও 'publish_video' পারমিশনে টিক দিয়ে Generate Access Token চাপুন।");
+        }
+
+        if (debugData.type === 'USER') {
+          console.log(`[Facebook Adapter] Token is a USER token. Automatically fetching Page Access Token for pageId=${pageId}...`);
+          
+          // Strategy 1: Direct Page token query
+          const pRes = await fetch(`${GRAPH_BASE}/${encodeURIComponent(pageId)}?fields=access_token,name&access_token=${encodeURIComponent(rawToken)}`);
+          const pData = await pRes.json();
+          if (pData.access_token) {
+            activeToken = pData.access_token;
+            console.log(`[Facebook Adapter] Successfully resolved Page Access Token for "${pData.name || pageId}"!`);
+          } else {
+            // Strategy 2: /me/accounts query
+            const meRes = await fetch(`${GRAPH_BASE}/me/accounts?fields=id,name,access_token&access_token=${encodeURIComponent(rawToken)}`);
+            const meData = await meRes.json();
+            if (meData.data && Array.isArray(meData.data)) {
+              const found = meData.data.find(p => p.id === pageId || (account.name && p.name.toLowerCase() === account.name.toLowerCase())) || meData.data[0];
+              if (found && found.access_token) {
+                activeToken = found.access_token;
+                pageId = found.id;
+                console.log(`[Facebook Adapter] Resolved Page Access Token via /me/accounts for "${found.name}"!`);
+              }
+            }
+          }
+
+          // Save resolved Page Access Token to DB for future seamless usage
+          if (activeToken !== rawToken) {
+            updateDb(draft => {
+              const fbAcc = draft.accounts?.find(a => a.id === account.id || a.pageId === pageId);
+              if (fbAcc) {
+                fbAcc.tokenEncrypted = crypto.encrypt(activeToken);
+                fbAcc.lastVerified = new Date().toISOString();
+              }
+            });
+          }
+        }
+      }
+    } catch (tokenErr) {
+      if (tokenErr.message.includes('পারমিশন')) {
+        throw tokenErr;
+      }
+      console.warn('[Facebook Adapter] Token auto-resolution warning:', tokenErr.message);
+    }
+
     const fullCaption = `${fbMeta.caption}\n\n${(fbMeta.hashtags || []).join(' ')}`.trim();
 
     // Download video file from Drive to ensure real bytes
@@ -211,7 +272,7 @@ class FacebookAdapter extends BaseAdapter {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           upload_phase: 'start',
-          access_token: rawToken
+          access_token: activeToken
         })
       });
 
@@ -221,7 +282,7 @@ class FacebookAdapter extends BaseAdapter {
         console.warn(`[Facebook Adapter] video_reels start failed: ${startData.error?.message}. Attempting Page Videos API...`);
         return await this.uploadViaPageVideosApi({
           pageId,
-          token: rawToken,
+          token: activeToken,
           caption: fullCaption,
           filePath: tempFilePath,
           title: video.title
@@ -238,7 +299,7 @@ class FacebookAdapter extends BaseAdapter {
       const binaryUploadRes = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `OAuth ${rawToken}`,
+          'Authorization': `OAuth ${activeToken}`,
           'offset': '0',
           'file_size': String(fileSize)
         },
@@ -260,7 +321,7 @@ class FacebookAdapter extends BaseAdapter {
           video_id: videoId,
           video_state: 'PUBLISHED',
           description: fullCaption,
-          access_token: rawToken
+          access_token: activeToken
         })
       });
 
