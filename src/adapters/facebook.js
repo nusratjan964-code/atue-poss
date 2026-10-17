@@ -50,54 +50,115 @@ class FacebookAdapter extends BaseAdapter {
     }
 
     try {
-      // 1. Check if token is for a Page directly or User Token
       let pageId = this.cleanPageIdentifier(account?.pageId || account?.handle);
-      
-      // If pageId looks numeric, verify directly
-      if (/^\d+$/.test(pageId)) {
-        const res = await fetch(`${GRAPH_BASE}/${pageId}?fields=id,name,link,verification_status&access_token=${rawToken}`);
-        const data = await res.json();
 
-        if (res.ok && data.id) {
+      // 1. Inspect Token with Meta debug_token endpoint
+      let debugData = null;
+      try {
+        const dRes = await fetch(`${GRAPH_BASE}/debug_token?input_token=${encodeURIComponent(rawToken)}&access_token=${encodeURIComponent(rawToken)}`);
+        const dJson = await dRes.json();
+        if (dJson.data && dJson.data.is_valid) {
+          debugData = dJson.data;
+        }
+      } catch (e) {}
+
+      // Handle Page Token directly
+      if (debugData && debugData.type === 'PAGE') {
+        const verifiedPageId = debugData.profile_id || pageId;
+        const pageName = account.name || debugData.application || 'Facebook Page';
+        const scopes = Array.isArray(debugData.scopes) ? debugData.scopes : [];
+        const requiredScopes = ['pages_manage_posts', 'publish_video'];
+        const missing = requiredScopes.filter(s => !scopes.includes(s));
+
+        if (missing.length > 0) {
           return {
             connected: true,
             status: 'VERIFIED',
-            pageId: data.id,
-            pageName: data.name,
-            link: data.link,
-            message: `✅ Facebook Page লাইভ কানেকশন সফল! পেজ: "${data.name}" (ID: ${data.id})`
+            pageId: verifiedPageId,
+            pageName,
+            scopes,
+            message: `✅ Facebook Page সংযুক্ত! ("${pageName}", ID: ${verifiedPageId})। ⚠️ রিলস পোস্ট করতে Meta Graph Explorer থেকে '${missing.join(', ')}' পারমিশন সহ টোকেন নেওয়া সুপারিশকৃত।`
           };
         }
-      }
-
-      // Check /me/accounts for user token to list managed pages
-      const meRes = await fetch(`${GRAPH_BASE}/me/accounts?fields=id,name,category,access_token,tasks&access_token=${rawToken}`);
-      const meData = await meRes.json();
-
-      if (meRes.ok && meData.data && meData.data.length > 0) {
-        const pages = meData.data.map(p => ({ id: p.id, name: p.name, category: p.category }));
-        const matchedPage = pageId ? pages.find(p => p.id === pageId || p.name.toLowerCase() === pageId.toLowerCase()) : pages[0];
-        const selected = matchedPage || pages[0];
 
         return {
           connected: true,
           status: 'VERIFIED',
-          pageId: selected.id,
-          pageName: selected.name,
-          managedPages: pages,
-          message: `✅ Meta Graph API কানেকশন সক্রিয়! পেজ: "${selected.name}" (মোট ${pages.length}টি পরিচালিত পেজ পাওয়া গেছে)`
+          pageId: verifiedPageId,
+          pageName,
+          scopes,
+          message: `✅ Facebook Page লাইভ কানেকশন সফল! পেজ: "${pageName}" (ID: ${verifiedPageId})`
         };
       }
 
-      // If me query failed, report error
-      const err = meData.error || { message: 'Invalid token or page not found' };
+      // 2. Direct Page query if pageId is numeric
+      if (/^\d+$/.test(pageId)) {
+        try {
+          const res = await fetch(`${GRAPH_BASE}/${pageId}?fields=id,name&access_token=${encodeURIComponent(rawToken)}`);
+          const data = await res.json();
+          if (res.ok && data.id) {
+            return {
+              connected: true,
+              status: 'VERIFIED',
+              pageId: data.id,
+              pageName: data.name,
+              message: `✅ Facebook Page লাইভ কানেকশন সফল! পেজ: "${data.name}" (ID: ${data.id})`
+            };
+          }
+        } catch (e) {}
+      }
+
+      // 3. User token: check /me/accounts only if token is NOT a Page token
+      if (!debugData || debugData.type === 'USER') {
+        const meRes = await fetch(`${GRAPH_BASE}/me/accounts?fields=id,name,category,access_token&access_token=${encodeURIComponent(rawToken)}`);
+        const meData = await meRes.json();
+
+        if (meRes.ok && meData.data && meData.data.length > 0) {
+          const pages = meData.data.map(p => ({ id: p.id, name: p.name, category: p.category }));
+          const matchedPage = pageId ? pages.find(p => p.id === pageId || p.name.toLowerCase() === pageId.toLowerCase()) : pages[0];
+          const selected = matchedPage || pages[0];
+
+          return {
+            connected: true,
+            status: 'VERIFIED',
+            pageId: selected.id,
+            pageName: selected.name,
+            managedPages: pages,
+            message: `✅ Meta Graph API কানেকশন সক্রিয়! পেজ: "${selected.name}" (মোট ${pages.length}টি পরিচালিত পেজ পাওয়া গেছে)`
+          };
+        }
+
+        if (meData.error && meData.error.message && !meData.error.message.includes('nonexisting field (accounts)')) {
+          return {
+            connected: false,
+            status: 'FAILED',
+            error: meData.error.message,
+            message: `Facebook টোকেন যাচাই ব্যর্থ: ${meData.error.message}`
+          };
+        }
+      }
+
+      // 4. Try querying /me
+      const selfRes = await fetch(`${GRAPH_BASE}/me?fields=id,name&access_token=${encodeURIComponent(rawToken)}`);
+      const selfData = await selfRes.json();
+      if (selfRes.ok && selfData.id) {
+        return {
+          connected: true,
+          status: 'VERIFIED',
+          pageId: selfData.id,
+          pageName: selfData.name,
+          message: `✅ Facebook একাউন্ট কানেকশন সক্রিয়! ("${selfData.name}", ID: ${selfData.id})`
+        };
+      }
+
+      const errMsg = selfData.error?.message || 'টোকেনটি যাচাই করা সম্ভব হয়নি।';
       return {
         connected: false,
         status: 'FAILED',
-        error: err.message,
-        type: err.type,
-        message: `Facebook টোকেন যাচাই ব্যর্থ: ${err.message}`
+        error: errMsg,
+        message: `Facebook টোকেন যাচাই ব্যর্থ: ${errMsg}`
       };
+
     } catch (err) {
       return {
         connected: false,
