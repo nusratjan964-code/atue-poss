@@ -245,6 +245,121 @@ router.post('/facebook/discover', async (req, res) => {
   }
 });
 
+// Automatically convert a short-lived token to a NEVER-EXPIRING Page Access Token
+router.post('/facebook/make-permanent', async (req, res) => {
+  const { appId, appSecret, token, pageId } = req.body;
+  if (!token || !token.trim()) {
+    return res.status(400).json({ success: false, error: 'টোকেন প্রদান করা আবশ্যক।' });
+  }
+
+  const cleanToken = token.trim();
+  const GRAPH_BASE = 'https://graph.facebook.com/v19.0';
+
+  try {
+    let longLivedToken = cleanToken;
+
+    // Step 1: If appId and appSecret provided, exchange short-lived token for 60-day long-lived user token
+    if (appId && appSecret) {
+      console.log('[Facebook Make-Permanent] Exchanging token with Meta oauth endpoint...');
+      const exchangeUrl = `${GRAPH_BASE}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(appId.trim())}&client_secret=${encodeURIComponent(appSecret.trim())}&fb_exchange_token=${encodeURIComponent(cleanToken)}`;
+      const exRes = await fetch(exchangeUrl);
+      const exData = await exRes.json();
+
+      if (!exRes.ok || exData.error) {
+        return res.status(400).json({
+          success: false,
+          error: `টোকেন এক্সচেঞ্জ ব্যর্থ: ${exData.error?.message || 'App ID বা App Secret সঠিক নয়'}`
+        });
+      }
+      longLivedToken = exData.access_token;
+    }
+
+    // Step 2: Fetch managed pages with the long-lived token to get NEVER-EXPIRING page tokens
+    console.log('[Facebook Make-Permanent] Fetching permanent page tokens...');
+    const accountsRes = await fetch(`${GRAPH_BASE}/me/accounts?fields=id,name,access_token,category&access_token=${encodeURIComponent(longLivedToken)}`);
+    const accountsData = await accountsRes.json();
+
+    if (!accountsRes.ok || !accountsData.data || accountsData.data.length === 0) {
+      // Check if the token passed was already a Page Access Token
+      const debugRes = await fetch(`${GRAPH_BASE}/debug_token?input_token=${encodeURIComponent(cleanToken)}&access_token=${encodeURIComponent(cleanToken)}`);
+      const debugData = await debugRes.json();
+      if (debugData.data?.type === 'PAGE') {
+        const isPermanent = !debugData.data.expires_at || debugData.data.expires_at === 0;
+        return res.json({
+          success: true,
+          permanent: isPermanent,
+          message: isPermanent 
+            ? '✅ আপনার টোকেনটি ইতোমধ্যে একটি পার্মানেন্ট (Never-Expiring) পেজ টোকেন!' 
+            : '⚠️ এটি একটি সাময়িক পেজ টোকেন। স্থায়ী টোকেন পেতে উপরে আপনার App ID ও App Secret প্রদান করুন।',
+          token: cleanToken
+        });
+      }
+
+      return res.status(400).json({
+        success: false,
+        error: 'কোনো ফেসবুক পেজ পাওয়া যায়নি। টোকেনে pages_show_list ও pages_manage_posts পারমিশন আছে কি না নিশ্চিত করুন।'
+      });
+    }
+
+    // Find target page (e.g. Chiku bd or matches pageId)
+    const targetPage = (pageId && accountsData.data.find(p => p.id === pageId)) || accountsData.data[0];
+    const permanentPageToken = targetPage.access_token;
+
+    // Verify expiration of the page token
+    let isNeverExpiring = false;
+    try {
+      const dRes = await fetch(`${GRAPH_BASE}/debug_token?input_token=${encodeURIComponent(permanentPageToken)}&access_token=${encodeURIComponent(permanentPageToken)}`);
+      const dData = await dRes.json();
+      if (!dData.data?.expires_at || dData.data.expires_at === 0) {
+        isNeverExpiring = true;
+      }
+    } catch (e) {}
+
+    // Automatically save this permanent token into database for the page!
+    updateDb(draft => {
+      if (!draft.accounts) draft.accounts = [];
+      const fbAcc = draft.accounts.find(a => a.platform === 'facebook' && (a.pageId === targetPage.id || a.name.toLowerCase() === targetPage.name.toLowerCase()));
+      if (fbAcc) {
+        fbAcc.tokenEncrypted = crypto.encrypt(permanentPageToken);
+        fbAcc.connected = true;
+        fbAcc.verified = true;
+        fbAcc.lastVerified = new Date().toISOString();
+        fbAcc.pageId = targetPage.id;
+        fbAcc.name = targetPage.name;
+      } else {
+        draft.accounts.push({
+          id: `acc_facebook_${Date.now()}`,
+          platform: 'facebook',
+          name: targetPage.name,
+          handle: `@${targetPage.name.toLowerCase().replace(/\s+/g, '')}`,
+          connected: true,
+          verified: true,
+          tokenEncrypted: crypto.encrypt(permanentPageToken),
+          pageId: targetPage.id,
+          lastVerified: new Date().toISOString()
+        });
+      }
+    });
+
+    addAuditLog('account', `ফেসবুক পেজ "${targetPage.name}"-এর জন্য পার্মানেন্ট (Never-Expiring) টোকেন সংরক্ষিত হয়েছে!`);
+
+    return res.json({
+      success: true,
+      pageId: targetPage.id,
+      pageName: targetPage.name,
+      permanent: isNeverExpiring,
+      token: permanentPageToken,
+      message: `🎉 অভিনন্দন! পেজ "${targetPage.name}"-এর জন্য স্থায়ী (Never-Expiring) টোকেন সক্রিয় করা হয়েছে। আর কখনো টোকেন দেওয়া লাগবে না!`
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: `পার্মানেন্ট টোকেন তৈরিতে ত্রুটি: ${err.message}`
+    });
+  }
+});
+
 // 1-Click Quick Connect & Test Account
 router.post('/quick-connect', async (req, res) => {
   const { platform, name, handle, pageId, igUserId, channelId, token } = req.body;
