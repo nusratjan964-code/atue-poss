@@ -131,4 +131,171 @@ router.post('/test/:id', async (req, res) => {
   });
 });
 
+// Auto-discover Facebook Pages & Linked Instagram Accounts via Meta Graph API Token
+router.post('/facebook/discover', async (req, res) => {
+  const { token } = req.body;
+  if (!token || !token.trim()) {
+    return res.status(400).json({ success: false, error: 'টোকেন প্রদান করা আবশ্যক।' });
+  }
+
+  const cleanToken = token.trim();
+  const GRAPH_BASE = 'https://graph.facebook.com/v19.0';
+
+  try {
+    // 1. Fetch user or page identity
+    const meRes = await fetch(`${GRAPH_BASE}/me?fields=id,name&access_token=${cleanToken}`);
+    const meData = await meRes.json();
+
+    if (!meRes.ok || meData.error) {
+      return res.status(400).json({
+        success: false,
+        error: meData.error?.message || 'টোকেনটি অবৈধ বা মেয়াদোত্তীর্ণ। নতুন টোকেন তৈরি করুন।',
+        type: meData.error?.type
+      });
+    }
+
+    // 2. Fetch managed pages with Instagram business account details
+    const accountsRes = await fetch(`${GRAPH_BASE}/me/accounts?fields=id,name,category,access_token,picture{url},instagram_business_account{id,username,name,profile_picture_url}&access_token=${cleanToken}`);
+    const accountsData = await accountsRes.json();
+
+    const pages = [];
+    const instagramAccounts = [];
+
+    if (accountsRes.ok && Array.isArray(accountsData.data) && accountsData.data.length > 0) {
+      for (const p of accountsData.data) {
+        pages.push({
+          id: p.id,
+          name: p.name,
+          category: p.category || 'Page',
+          picture: p.picture?.data?.url || null,
+          token: p.access_token || cleanToken
+        });
+
+        if (p.instagram_business_account) {
+          instagramAccounts.push({
+            id: p.instagram_business_account.id,
+            username: p.instagram_business_account.username,
+            name: p.instagram_business_account.name || p.instagram_business_account.username,
+            picture: p.instagram_business_account.profile_picture_url || null,
+            linkedPageName: p.name,
+            token: p.access_token || cleanToken
+          });
+        }
+      }
+    } else {
+      // If token provided is directly a Page Access Token
+      pages.push({
+        id: meData.id,
+        name: meData.name,
+        category: 'Page',
+        picture: null,
+        token: cleanToken
+      });
+
+      try {
+        const igRes = await fetch(`${GRAPH_BASE}/${meData.id}?fields=instagram_business_account{id,username,name,profile_picture_url}&access_token=${cleanToken}`);
+        const igData = await igRes.json();
+        if (igRes.ok && igData.instagram_business_account) {
+          instagramAccounts.push({
+            id: igData.instagram_business_account.id,
+            username: igData.instagram_business_account.username,
+            name: igData.instagram_business_account.name || igData.instagram_business_account.username,
+            picture: igData.instagram_business_account.profile_picture_url || null,
+            linkedPageName: meData.name,
+            token: cleanToken
+          });
+        }
+      } catch (e) {}
+    }
+
+    return res.json({
+      success: true,
+      userName: meData.name,
+      userId: meData.id,
+      pages,
+      instagramAccounts,
+      message: `মোট ${pages.length}টি ফেসবুক পেজ এবং ${instagramAccounts.length}টি ইনস্টাগ্রাম একাউন্ট পাওয়া গেছে!`
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: `Meta Graph API এর সাথে যোগাযোগে ত্রুটি: ${err.message}`
+    });
+  }
+});
+
+// 1-Click Quick Connect & Test Account
+router.post('/quick-connect', async (req, res) => {
+  const { platform, name, handle, pageId, igUserId, channelId, token } = req.body;
+  if (!platform || !name || !token) {
+    return res.status(400).json({ success: false, error: 'Platform, name, and token are required.' });
+  }
+
+  const p = platform.toLowerCase();
+  const accountId = `acc_${p}_${Date.now()}`;
+  const encryptedToken = crypto.encrypt(token.trim());
+
+  const accountObj = {
+    id: accountId,
+    platform: p,
+    name: name.trim(),
+    handle: handle ? (handle.startsWith('@') ? handle.trim() : `@${handle.trim()}`) : `@${name.toLowerCase().replace(/\s+/g, '')}`,
+    connected: true,
+    channelId: channelId || null,
+    pageId: pageId || null,
+    igUserId: igUserId || null,
+    tokenEncrypted: encryptedToken,
+    lastVerified: new Date().toISOString(),
+    verified: false
+  };
+
+  // Test with provider adapter
+  const adapter = getAdapter(p);
+  let testResult = { connected: true, status: 'CONFIGURED' };
+  if (adapter && typeof adapter.testConnection === 'function') {
+    try {
+      testResult = await adapter.testConnection({ ...accountObj, token: token.trim() });
+    } catch (err) {
+      testResult = { connected: false, status: 'FAILED', message: err.message };
+    }
+  }
+
+  accountObj.connected = testResult.connected;
+  accountObj.verified = testResult.status === 'VERIFIED';
+
+  updateDb(draft => {
+    if (!draft.accounts) draft.accounts = [];
+    const existingIndex = draft.accounts.findIndex(a => 
+      a.platform === p && (
+        (pageId && a.pageId === pageId) || 
+        (igUserId && a.igUserId === igUserId) || 
+        (channelId && a.channelId === channelId) ||
+        (a.id === `acc_${p}_1` && !a.connected)
+      )
+    );
+
+    if (existingIndex >= 0) {
+      accountObj.id = draft.accounts[existingIndex].id;
+      draft.accounts[existingIndex] = { ...draft.accounts[existingIndex], ...accountObj };
+    } else {
+      draft.accounts.push(accountObj);
+    }
+  });
+
+  addAuditLog('account', `সোশ্যাল একাউন্ট সফলভাবে কানেক্ট করা হয়েছে (${p.toUpperCase()}): "${name}"`);
+
+  res.json({
+    success: true,
+    account: {
+      id: accountObj.id,
+      platform: accountObj.platform,
+      name: accountObj.name,
+      handle: accountObj.handle,
+      connected: accountObj.connected,
+      verified: accountObj.verified
+    },
+    testResult
+  });
+});
+
 module.exports = router;

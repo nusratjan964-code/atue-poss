@@ -749,9 +749,65 @@ function initAccountEvents() {
   const btnOAuthBanner = document.getElementById('btnTriggerGoogleAuthAction');
   const btnTestDrive = document.getElementById('btnTestGoogleDriveBanner');
 
-  if (btnOAuthHeader) btnOAuthHeader.addEventListener('click', triggerGoogleOAuthFlow);
-  if (btnOAuthBanner) btnOAuthBanner.addEventListener('click', triggerGoogleOAuthFlow);
+  if (btnOAuthHeader) btnOAuthHeader.addEventListener('click', () => handleGoogleConnectRequest());
+  if (btnOAuthBanner) btnOAuthBanner.addEventListener('click', () => handleGoogleConnectRequest());
   if (btnTestDrive) btnTestDrive.addEventListener('click', testGoogleDriveDirect);
+
+  // Quick Hub Triggers
+  const btnQuickYt = document.getElementById('btnQuickConnectYt');
+  if (btnQuickYt) btnQuickYt.addEventListener('click', () => handleGoogleConnectRequest());
+
+  const btnOpenFbDirect = document.getElementById('btnOpenFbDiscoverDirect');
+  const btnQuickFb = document.getElementById('btnQuickConnectFb');
+  if (btnOpenFbDirect) btnOpenFbDirect.addEventListener('click', () => openModal('modalFacebookDiscover'));
+  if (btnQuickFb) btnQuickFb.addEventListener('click', () => openModal('modalFacebookDiscover'));
+
+  const btnQuickIg = document.getElementById('btnQuickConnectIg');
+  if (btnQuickIg) btnQuickIg.addEventListener('click', () => {
+    openModal('modalFacebookDiscover');
+  });
+
+  const btnQuickTt = document.getElementById('btnQuickConnectTt');
+  if (btnQuickTt) btnQuickTt.addEventListener('click', () => {
+    openModal('modalAddAccount');
+    const ttBtn = document.querySelector('.platform-selector-tabs .p-select-btn[data-p="tiktok"]');
+    if (ttBtn) ttBtn.click();
+  });
+
+  // Facebook Auto-Discover events
+  const btnCloseFb = document.getElementById('btnCloseFbDiscover');
+  const btnCancelFb = document.getElementById('btnCancelFbDiscover');
+  const btnTriggerFb = document.getElementById('btnTriggerFbDiscover');
+
+  if (btnCloseFb) btnCloseFb.addEventListener('click', () => closeModal('modalFacebookDiscover'));
+  if (btnCancelFb) btnCancelFb.addEventListener('click', () => closeModal('modalFacebookDiscover'));
+  if (btnTriggerFb) btnTriggerFb.addEventListener('click', runFacebookAutoDiscovery);
+
+  // Google Setup Modal events
+  const btnCloseGg = document.getElementById('btnCloseGoogleSetup');
+  const btnCancelGg = document.getElementById('btnCancelGoogleSetup');
+  const btnSaveGgOnly = document.getElementById('btnSaveGoogleCredsOnly');
+  const btnSaveGgLaunch = document.getElementById('btnSaveAndLaunchGoogleOAuth');
+  const btnCopyRedirect = document.getElementById('btnCopyRedirectUri');
+  const btnCopyRedirectSettings = document.getElementById('btnCopyRedirectUriSettings');
+
+  if (btnCloseGg) btnCloseGg.addEventListener('click', () => closeModal('modalGoogleSetup'));
+  if (btnCancelGg) btnCancelGg.addEventListener('click', () => closeModal('modalGoogleSetup'));
+  if (btnSaveGgOnly) btnSaveGgOnly.addEventListener('click', () => saveGoogleCredentials(false));
+  if (btnSaveGgLaunch) btnSaveGgLaunch.addEventListener('click', () => saveGoogleCredentials(true));
+
+  if (btnCopyRedirect) {
+    btnCopyRedirect.addEventListener('click', () => {
+      navigator.clipboard.writeText('http://localhost:3000/api/auth/google/callback');
+      showToast('Redirect URI ক্লিপবোর্ডে কপি হয়েছে!', 'success');
+    });
+  }
+  if (btnCopyRedirectSettings) {
+    btnCopyRedirectSettings.addEventListener('click', () => {
+      navigator.clipboard.writeText('http://localhost:3000/api/auth/google/callback');
+      showToast('Redirect URI ক্লিপবোর্ডে কপি হয়েছে!', 'success');
+    });
+  }
 
   // Platform choice tabs in modal
   const pBtns = document.querySelectorAll('.platform-selector-tabs .p-select-btn');
@@ -768,7 +824,7 @@ function initAccountEvents() {
       if (p === 'facebook') {
         if (lblId) lblId.textContent = 'Facebook Page ID (numeric):';
         if (inputId) inputId.placeholder = 'যেমন: 1309863422219233';
-        if (helpId) helpId.textContent = 'আপনার Facebook পেজের সংখ্যাসূচক Page ID দিন।';
+        if (helpId) helpId.textContent = 'আপনার Facebook পেজের সংখ্যাসূচক Page ID দিন অথবা অটো-ফাইন্ডার ব্যবহার করুন।';
       } else if (p === 'instagram') {
         if (lblId) lblId.textContent = 'Instagram Professional User ID (numeric):';
         if (inputId) inputId.placeholder = 'যেমন: 1784140029381923';
@@ -776,7 +832,7 @@ function initAccountEvents() {
       } else if (p === 'youtube') {
         if (lblId) lblId.textContent = 'YouTube Channel ID (ঐচ্ছিক):';
         if (inputId) inputId.placeholder = 'যেমন: UC_xxxx... (OAuth দিয়ে স্বয়ংক্রিয় কানেক্ট সুপারিশকৃত)';
-        if (helpId) helpId.textContent = '"Google একাউন্ট কানেক্ট" বাটন দিয়ে স্বয়ংক্রিয়ভাবে চ্যানেল কানেক্ট করা যায়।';
+        if (helpId) helpId.textContent = '"Google একাউন্ট কানেক্ট" বাটন দিয়ে ১-ক্লিকে চ্যানেল যুক্ত করুন।';
       } else {
         if (lblId) lblId.textContent = 'TikTok Open ID / Account ID (ঐচ্ছিক):';
         if (inputId) inputId.placeholder = 'যেমন: @bangla_aiviral';
@@ -784,6 +840,178 @@ function initAccountEvents() {
       }
     });
   });
+}
+
+async function handleGoogleConnectRequest() {
+  try {
+    const res = await fetch('/api/auth/status');
+    const data = await res.json();
+    if (!data.google.configured) {
+      openModal('modalGoogleSetup');
+      showToast('প্রথমে Google Client ID ও Secret প্রদান করুন।', 'info');
+      return;
+    }
+    triggerGoogleOAuthFlow();
+  } catch (e) {
+    triggerGoogleOAuthFlow();
+  }
+}
+
+async function saveGoogleCredentials(launchOAuthAfter = false) {
+  const googleClientId = (document.getElementById('inputGoogleClientId')?.value || '').trim();
+  const googleClientSecret = (document.getElementById('inputGoogleClientSecret')?.value || '').trim();
+
+  if (!googleClientId) {
+    showToast('অনুগ্রহ করে Google Client ID দিন!', 'warning');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ googleClientId, googleClientSecret })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Google Credentials সংরক্ষিত হয়েছে!', 'success');
+      closeModal('modalGoogleSetup');
+      loadAccounts();
+      if (launchOAuthAfter) {
+        setTimeout(() => triggerGoogleOAuthFlow(), 300);
+      }
+    } else {
+      showToast(data.error || 'সেভ করতে সমস্যা হয়েছে', 'error');
+    }
+  } catch (err) {
+    showToast(`ত্রুটি: ${err.message}`, 'error');
+  }
+}
+
+async function runFacebookAutoDiscovery() {
+  const tokenInput = document.getElementById('inputFbDiscoverToken');
+  const token = (tokenInput ? tokenInput.value : '').trim();
+  const statusBox = document.getElementById('fbDiscoverStatusBox');
+  const listEl = document.getElementById('fbDiscoveredList');
+
+  if (!token) {
+    showToast('অনুগ্রহ করে মেটা এক্সেস টোকেন পেস্ট করুন!', 'warning');
+    return;
+  }
+
+  statusBox.style.display = 'block';
+  statusBox.innerHTML = '<div style="color: var(--accent-cyan); font-size: 13px;"><i class="fa-solid fa-spinner fa-spin"></i> মেটা সার্ভারে পেজ খোঁজা হচ্ছে...</div>';
+  listEl.style.display = 'none';
+  listEl.innerHTML = '';
+
+  try {
+    const res = await fetch('/api/accounts/facebook/discover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      statusBox.innerHTML = `<div style="background: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-red); border-radius: 8px; padding: 12px; color: #fca5a5; font-size: 13px;">
+        <i class="fa-solid fa-triangle-exclamation"></i> <strong>ত্রুটি:</strong> ${escapeHtml(data.error || 'পেজ লোড করা যায়নি')}
+        <div style="font-size: 12px; margin-top: 6px; color: #cbd5e1;">সুপারিশ: Meta Graph Explorer-এ গিয়ে নিশ্চিত করুন 'pages_show_list', 'pages_manage_posts', 'publish_video' পারমিশন যোগ করা আছে।</div>
+      </div>`;
+      return;
+    }
+
+    statusBox.innerHTML = `<div style="background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-green); border-radius: 8px; padding: 10px 14px; color: #86efac; font-size: 13px; display: flex; align-items: center; justify-content: space-between;">
+      <span><i class="fa-solid fa-circle-check"></i> ${escapeHtml(data.message)} (ব্যবহারকারী: ${escapeHtml(data.userName || 'Meta User')})</span>
+    </div>`;
+
+    let html = '';
+    
+    // Facebook Pages
+    (data.pages || []).forEach(p => {
+      const avatarHtml = p.picture 
+        ? `<img src="${p.picture}" class="discovered-avatar" alt="${escapeHtml(p.name)}">`
+        : `<div class="discovered-avatar" style="color: #1877f2;"><i class="fa-brands fa-facebook"></i></div>`;
+
+      html += `
+        <div class="discovered-item">
+          <div class="discovered-info">
+            ${avatarHtml}
+            <div>
+              <strong style="color: #fff; font-size: 14px; display: block;">${escapeHtml(p.name)}</strong>
+              <span style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(p.category || 'Facebook Page')} &bull; ID: <code>${p.id}</code></span>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="connectDiscoveredAccount('facebook', '${escapeJs(p.name)}', '${p.id}', '${escapeJs(p.token)}')">
+            <i class="fa-solid fa-plus"></i> ১-ক্লিকে কানেক্ট
+          </button>
+        </div>
+      `;
+    });
+
+    // Instagram Accounts
+    (data.instagramAccounts || []).forEach(ig => {
+      const avatarHtml = ig.picture 
+        ? `<img src="${ig.picture}" class="discovered-avatar" alt="${escapeHtml(ig.username)}">`
+        : `<div class="discovered-avatar" style="color: #ec4899;"><i class="fa-brands fa-instagram"></i></div>`;
+
+      html += `
+        <div class="discovered-item">
+          <div class="discovered-info">
+            ${avatarHtml}
+            <div>
+              <strong style="color: #fff; font-size: 14px; display: block;">@${escapeHtml(ig.username)}</strong>
+              <span style="font-size: 11.5px; color: var(--text-muted);">Instagram Business &bull; Linked with: ${escapeHtml(ig.linkedPageName || 'Page')}</span>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="background: linear-gradient(45deg, #f09433, #dc2743);" onclick="connectDiscoveredAccount('instagram', '${escapeJs(ig.name || ig.username)}', '${ig.id}', '${escapeJs(ig.token)}', '${escapeJs(ig.username)}')">
+            <i class="fa-brands fa-instagram"></i> Instagram কানেক্ট
+          </button>
+        </div>
+      `;
+    });
+
+    listEl.innerHTML = html;
+    listEl.style.display = 'flex';
+
+  } catch (err) {
+    statusBox.innerHTML = `<div style="color: var(--accent-red); font-size: 13px;">সার্ভার এরর: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function connectDiscoveredAccount(platform, name, idOrPageId, token, handle = '') {
+  showToast(`"${name}" একাউন্টটি লাইভ কানেক্ট করা হচ্ছে...`, 'info');
+  try {
+    const payload = {
+      platform,
+      name,
+      handle: handle ? (handle.startsWith('@') ? handle : `@${handle}`) : `@${name.toLowerCase().replace(/\s+/g, '')}`,
+      pageId: platform === 'facebook' ? idOrPageId : null,
+      igUserId: platform === 'instagram' ? idOrPageId : null,
+      token
+    };
+
+    const res = await fetch('/api/accounts/quick-connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      showToast(`✅ "${name}" (${platform.toUpperCase()}) সফলভাবে কানেক্ট ও লাইভ ভেরিফাইড হয়েছে!`, 'success');
+      closeModal('modalFacebookDiscover');
+      loadAccounts();
+    } else {
+      showToast(data.error || 'কানেক্ট করতে সমস্যা হয়েছে', 'error');
+    }
+  } catch (err) {
+    showToast(`কানেক্ট ত্রুটি: ${err.message}`, 'error');
+  }
+}
+
+function escapeJs(str) {
+  if (!str) return '';
+  return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
 async function triggerGoogleOAuthFlow() {
@@ -794,6 +1022,7 @@ async function triggerGoogleOAuthFlow() {
       window.open(data.url, 'google_oauth_popup', 'width=600,height=700');
     } else {
       showToast(data.error || 'Google OAuth URL তৈরি করা যায়নি।', 'error');
+      openModal('modalGoogleSetup');
     }
   } catch (err) {
     showToast(`OAuth ত্রুটি: ${err.message}`, 'error');
@@ -829,6 +1058,44 @@ async function loadAccounts() {
       const activeCount = data.accounts.filter(a => a.connected).length;
       const countEl = document.getElementById('navAccountsCount');
       if (countEl) countEl.textContent = activeCount;
+
+      // Update Quick Hub Badges
+      const ytAcc = data.accounts.find(a => a.platform === 'youtube' && a.connected);
+      const fbAcc = data.accounts.find(a => a.platform === 'facebook' && a.connected);
+      const igAcc = data.accounts.find(a => a.platform === 'instagram' && a.connected);
+      const ttAcc = data.accounts.find(a => a.platform === 'tiktok' && a.connected);
+
+      const qbYt = document.getElementById('quickBadgeYt');
+      const qdYt = document.getElementById('quickDescYt');
+      if (qbYt) {
+        qbYt.className = ytAcc ? 'badge green' : 'badge red';
+        qbYt.innerHTML = ytAcc ? '<i class="fa-solid fa-circle-check"></i> কানেক্টেড' : 'অসংযুক্ত';
+      }
+      if (qdYt && ytAcc) qdYt.textContent = `চ্যানেল: ${ytAcc.name} (${ytAcc.handle || ytAcc.channelId})`;
+
+      const qbFb = document.getElementById('quickBadgeFb');
+      const qdFb = document.getElementById('quickDescFb');
+      if (qbFb) {
+        qbFb.className = fbAcc ? 'badge green' : 'badge blue';
+        qbFb.innerHTML = fbAcc ? '<i class="fa-solid fa-circle-check"></i> কানেক্টেড' : 'অসংযুক্ত';
+      }
+      if (qdFb && fbAcc) qdFb.textContent = `সংযুক্ত পেজ: ${fbAcc.name} (${fbAcc.handle || fbAcc.pageId})`;
+
+      const qbIg = document.getElementById('quickBadgeIg');
+      const qdIg = document.getElementById('quickDescIg');
+      if (qbIg) {
+        qbIg.className = igAcc ? 'badge green' : 'badge pink';
+        qbIg.innerHTML = igAcc ? '<i class="fa-solid fa-circle-check"></i> কানেক্টেড' : 'অসংযুক্ত';
+      }
+      if (qdIg && igAcc) qdIg.textContent = `ইনস্টাগ্রাম: ${igAcc.name} (${igAcc.handle || igAcc.igUserId})`;
+
+      const qbTt = document.getElementById('quickBadgeTt');
+      const qdTt = document.getElementById('quickDescTt');
+      if (qbTt) {
+        qbTt.className = ttAcc ? 'badge green' : 'badge cyan';
+        qbTt.innerHTML = ttAcc ? '<i class="fa-solid fa-circle-check"></i> কানেক্টেড' : 'অসংযুক্ত';
+      }
+      if (qdTt && ttAcc) qdTt.textContent = `টিকটক: ${ttAcc.name} (${ttAcc.handle})`;
     }
 
     // 2. Fetch Google OAuth Status
@@ -848,6 +1115,13 @@ async function loadAccounts() {
           desc.textContent = `অনুমোদিত ইমেইল: ${authData.google.email || 'Google Account'} | ফোল্ডার: ${authData.google.selectedFolderName || 'Google Drive'} | স্কোপ: Drive & YouTube`;
         }
         if (btnLbl) btnLbl.textContent = 'Reconnect Google';
+
+        const gNotice = document.getElementById('boxGoogleConnectedNotice');
+        if (gNotice) {
+          gNotice.style.display = 'block';
+          const emailEl = document.getElementById('lblGoogleConnectedEmail');
+          if (emailEl) emailEl.textContent = `Connected: ${authData.google.email}`;
+        }
       } else if (authData.google.configured) {
         if (badge) {
           badge.className = 'badge gold';
@@ -863,9 +1137,9 @@ async function loadAccounts() {
           badge.innerHTML = '<i class="fa-solid fa-key"></i> Missing Credentials';
         }
         if (desc) {
-          desc.textContent = '.env ফাইলে GOOGLE_CLIENT_ID ও GOOGLE_CLIENT_SECRET কনফিগার করে সার্ভার রিস্টার্ট করুন।';
+          desc.textContent = 'Settings বা Social Accounts থেকে Google Client ID ও Secret কনফিগার করুন।';
         }
-        if (btnLbl) btnLbl.textContent = 'Connect Google';
+        if (btnLbl) btnLbl.textContent = 'Configure Google';
       }
     }
   } catch (err) {
@@ -1062,6 +1336,15 @@ async function loadSettings() {
     document.getElementById('cfgGeminiModel').value = settings.geminiModel || 'gemini-2.5-flash';
     document.getElementById('cfgDailyAiLimit').value = settings.dailyGeminiLimit || 50;
 
+    // Credentials inputs
+    const inputGgClientId = document.getElementById('cfgGoogleClientId');
+    const inputGgClientSecret = document.getElementById('cfgGoogleClientSecret');
+    const inputGeminiKey = document.getElementById('cfgGeminiApiKey');
+
+    if (inputGgClientId && settings.googleClientId) inputGgClientId.value = settings.googleClientId;
+    if (inputGgClientSecret && settings.hasGoogleClientSecret) inputGgClientSecret.placeholder = '•••••••••••••••• (সংরক্ষিত আছে)';
+    if (inputGeminiKey && settings.geminiApiKey) inputGeminiKey.value = settings.geminiApiKey;
+
     // Radio mode
     const modeRadios = document.querySelectorAll('input[name="cfgMode"]');
     modeRadios.forEach(r => {
@@ -1088,6 +1371,10 @@ async function saveAllSettings() {
   const reviewMode = modeRadio ? modeRadio.value === 'review' : true;
   const autoPublishEnabled = !reviewMode;
 
+  const googleClientId = (document.getElementById('cfgGoogleClientId')?.value || '').trim();
+  const googleClientSecret = (document.getElementById('cfgGoogleClientSecret')?.value || '').trim();
+  const geminiApiKey = (document.getElementById('cfgGeminiApiKey')?.value || '').trim();
+
   try {
     const res = await fetch('/api/settings', {
       method: 'POST',
@@ -1098,13 +1385,17 @@ async function saveAllSettings() {
         geminiModel,
         dailyGeminiLimit,
         reviewMode,
-        autoPublishEnabled
+        autoPublishEnabled,
+        googleClientId,
+        googleClientSecret,
+        geminiApiKey
       })
     });
     const data = await res.json();
     if (data.success) {
-      showToast('সেটিংস সফলভাবে সংরক্ষিত হয়েছে!', 'success');
+      showToast('সেটিংস ও API ক্রেডেনশিয়ালস সফলভাবে সংরক্ষিত হয়েছে!', 'success');
       loadDashboardStats();
+      loadAccounts();
     }
   } catch (err) {
     showToast(`সেটিংস সেভ ব্যর্থ: ${err.message}`, 'error');

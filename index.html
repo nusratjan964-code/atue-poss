@@ -531,8 +531,8 @@
       <section class="tab-panel" id="tab-accounts">
         <div class="panel-header">
           <div>
-            <h2><i class="fa-solid fa-share-nodes text-blue"></i> সোশ্যাল মিডিয়া অ্যাকাউন্ট কানেকশন</h2>
-            <p class="subtitle">আপনার YouTube Channel, Facebook Page, Instagram ও TikTok প্রোফাইল যুক্ত ও পরিচালনা করুন</p>
+            <h2><i class="fa-solid fa-share-nodes text-blue"></i> সোশ্যাল মিডিয়া অ্যাকাউন্ট কানেকশন সেন্টার</h2>
+            <p class="subtitle">আপনার YouTube Channel, Facebook Page, Instagram ও TikTok প্রোফাইল একদম সহজে ১-ক্লিকে যুক্ত ও পরিচালনা করুন</p>
           </div>
           <div class="panel-actions">
             <button class="btn btn-outline btn-sm" id="btnConnectGoogleOAuth">
@@ -541,6 +541,85 @@
             <button class="btn btn-primary btn-sm" id="btnOpenAddAccountModal">
               <i class="fa-solid fa-plus"></i> নতুন পেজ / অ্যাকাউন্ট যুক্ত করুন
             </button>
+          </div>
+        </div>
+
+        <!-- Quick 1-Click Connection Wizard Banner -->
+        <div class="quick-connect-banner">
+          <div class="quick-connect-header">
+            <div>
+              <h3 style="color: #fff; font-size: 16px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-bolt text-gold"></i> সহজে ১-ক্লিক সোশ্যাল কানেকশন হাব (Quick Connect Hub)
+              </h3>
+              <p style="margin: 0; font-size: 12.5px; color: var(--text-muted);">
+                কোনো জটিল কনফিগারেশন ছাড়াই সরাসরি আপনার ফেসবুক পেজ, ইউটিউব চ্যানেল ও ইনস্টাগ্রাম একাউন্ট কানেক্ট করুন
+              </p>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btnOpenFbDiscoverDirect" style="background: #1877f2; border-color: #1877f2;">
+              <i class="fa-brands fa-facebook"></i> ফেসবুক পেজ অটো-ডিটেক্টর
+            </button>
+          </div>
+
+          <div class="quick-hub-grid">
+            <!-- 1. YouTube -->
+            <div class="quick-hub-card platform-youtube">
+              <div class="quick-hub-top">
+                <div class="quick-hub-icon" style="background: rgba(255, 0, 51, 0.15); color: #ff0033;">
+                  <i class="fa-brands fa-youtube"></i>
+                </div>
+                <span class="badge red" id="quickBadgeYt">অসংযুক্ত</span>
+              </div>
+              <h4>YouTube Shorts</h4>
+              <p id="quickDescYt">অফিসিয়াল Google OAuth দিয়ে ১-ক্লিকে চ্যানেল কানেক্ট করুন।</p>
+              <button class="btn btn-primary btn-sm" id="btnQuickConnectYt" style="width: 100%;">
+                <i class="fa-brands fa-google"></i> ১-ক্লিকে কানেক্ট
+              </button>
+            </div>
+
+            <!-- 2. Facebook -->
+            <div class="quick-hub-card platform-facebook">
+              <div class="quick-hub-top">
+                <div class="quick-hub-icon" style="background: rgba(24, 119, 242, 0.15); color: #1877f2;">
+                  <i class="fa-brands fa-facebook"></i>
+                </div>
+                <span class="badge blue" id="quickBadgeFb">অসংযুক্ত</span>
+              </div>
+              <h4>Facebook Pages & Reels</h4>
+              <p id="quickDescFb">মেটা টোকেন পেস্ট করলেই আপনার সব পেজ অটোমেটিক খুঁজে দেবে।</p>
+              <button class="btn btn-primary btn-sm" id="btnQuickConnectFb" style="width: 100%; background: #1877f2;">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> পেজগুলো খুঁজুন ও কানেক্ট
+              </button>
+            </div>
+
+            <!-- 3. Instagram -->
+            <div class="quick-hub-card platform-instagram">
+              <div class="quick-hub-top">
+                <div class="quick-hub-icon" style="background: rgba(236, 72, 153, 0.15); color: #ec4899;">
+                  <i class="fa-brands fa-instagram"></i>
+                </div>
+                <span class="badge pink" id="quickBadgeIg">অসংযুক্ত</span>
+              </div>
+              <h4>Instagram Professional</h4>
+              <p id="quickDescIg">ফেসবুক পেজের সাথে যুক্ত ইনস্টাগ্রাম স্বয়ংক্রিয়ভাবে ডিটেক্ট হবে।</p>
+              <button class="btn btn-outline btn-sm" id="btnQuickConnectIg" style="width: 100%;">
+                <i class="fa-brands fa-instagram"></i> Instagram কানেক্ট
+              </button>
+            </div>
+
+            <!-- 4. TikTok -->
+            <div class="quick-hub-card platform-tiktok">
+              <div class="quick-hub-top">
+                <div class="quick-hub-icon" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">
+                  <i class="fa-brands fa-tiktok"></i>
+                </div>
+                <span class="badge cyan" id="quickBadgeTt">অসংযুক্ত</span>
+              </div>
+              <h4>TikTok Creator</h4>
+              <p id="quickDescTt">TikTok Content Posting API দিয়ে সরাসরি সংযুক্ত করুন।</p>
+              <button class="btn btn-outline btn-sm" id="btnQuickConnectTt" style="width: 100%;">
+                <i class="fa-brands fa-tiktok"></i> TikTok কানেক্ট
+              </button>
+            </div>
           </div>
         </div>
 
@@ -570,6 +649,9 @@
           </div>
         </div>
 
+        <h3 style="font-size: 15px; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-list-check text-green"></i> আপনার সংযুক্ত সোশ্যাল অ্যাকাউন্টসমূহ:
+        </h3>
         <div class="accounts-grid" id="accountsGridContainer">
           <!-- Populated by JS -->
         </div>
@@ -679,10 +761,170 @@
             </div>
           </div>
 
+          <!-- API Keys & OAuth Credentials Card -->
+          <div class="card settings-card" style="grid-column: 1 / -1; border-left: 4px solid var(--accent-blue);">
+            <h3><i class="fa-solid fa-key text-blue"></i> গুগল ও সোশ্যাল API ক্রেডেনশিয়ালস (API Credentials Manager)</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+              এখানে আপনার Google Client ID, Secret এবং Gemini API কী সরাসরি ব্রাউজার থেকেই কনফিগার ও সেভ করুন। কোনো ফাইল ম্যানুয়ালি এডিট করার প্রয়োজন নেই।
+            </p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+              <div class="form-group">
+                <label for="cfgGoogleClientId">Google Client ID (Drive + YouTube):</label>
+                <input type="text" id="cfgGoogleClientId" class="form-control" placeholder="12345678-xxx.apps.googleusercontent.com">
+                <small class="helper-text">Google Cloud Console থেকে প্রাপ্ত ওয়েব ক্লায়েন্ট আইডি</small>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgGoogleClientSecret">Google Client Secret:</label>
+                <input type="password" id="cfgGoogleClientSecret" class="form-control" placeholder="GOCSPX-xxxxxx">
+                <small class="helper-text">গোপন ক্লায়েন্ট সিক্রেট (সার্ভারে এনক্রিপ্টেড থাকবে)</small>
+              </div>
+
+              <div class="form-group">
+                <label for="cfgGeminiApiKey">Gemini AI API Key:</label>
+                <input type="password" id="cfgGeminiApiKey" class="form-control" placeholder="AIzaSy...">
+                <small class="helper-text"><a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">Google AI Studio</a> থেকে ফ্রি API কী নিন</small>
+              </div>
+            </div>
+
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px dashed var(--border-color); border-radius: 8px; padding: 12px 16px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+              <div style="font-size: 12px; color: var(--text-muted);">
+                Authorized Redirect URI: <strong class="code-chip">http://localhost:3000/api/auth/google/callback</strong>
+              </div>
+              <button type="button" class="btn btn-outline btn-xs" id="btnCopyRedirectUriSettings">
+                <i class="fa-solid fa-copy"></i> Redirect URI কপি করুন
+              </button>
+            </div>
+          </div>
+
         </div>
       </section>
 
     </main>
+  </div>
+
+  <!-- Modal: Facebook & Instagram Auto Discover -->
+  <div class="modal-backdrop" id="modalFacebookDiscover" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-brands fa-facebook text-blue"></i> মেটা ফেসবুক পেজ ও ইনস্টাগ্রাম অটো-ফাইন্ডার</h3>
+        <button class="btn-close" id="btnCloseFbDiscover"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Easy 3-Step Guide -->
+        <div class="step-guide-box">
+          <div style="font-weight: 700; color: #fff; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <span><i class="fa-solid fa-circle-info text-cyan"></i> ১ মিনিটে ফেসবুক টোকেন পাওয়ার সহজ গাইড:</span>
+            <a href="https://developers.facebook.com/tools/explorer/" target="_blank" class="btn btn-outline btn-xs" style="color: var(--accent-blue); border-color: rgba(56, 189, 248, 0.4); text-decoration: none;">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Meta Graph Explorer খুলুন ↗
+            </a>
+          </div>
+          <div class="step-guide-item">
+            <div class="step-num">১</div>
+            <div>উপরের <strong>Meta Graph Explorer</strong> লিঙ্কে ক্লিক করুন। আপনার মেটা/ফেসবুক অ্যাকাউন্টে লগইন করা থাকতে হবে।</div>
+          </div>
+          <div class="step-guide-item">
+            <div class="step-num">২</div>
+            <div>
+              ডানপাশে <strong>Permissions</strong>-এ ক্লিক করে <span class="code-chip">pages_show_list</span>, <span class="code-chip">pages_manage_posts</span> এবং <span class="code-chip">publish_video</span> টিক দিন এবং <strong>Generate Access Token</strong> চাপুন।
+            </div>
+          </div>
+          <div class="step-guide-item">
+            <div class="step-num">৩</div>
+            <div>টোকেনটি কপি করে নিচের বক্সে পেস্ট করে <strong>"আমার পেজগুলো খুঁজুন"</strong> চাপুন। আপনার সব পেজ তাৎক্ষণিক চলে আসবে!</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="font-weight: 600; color: #fff;">মেটা অ্যাক্সেস টোকেন (Meta User বা Page Access Token পেস্ট করুন):</label>
+          <div style="position: relative;">
+            <input type="text" id="inputFbDiscoverToken" class="form-control" placeholder="EAA... আপনার মেটা টোকেনটি এখানে পেস্ট করুন" style="padding-right: 90px; font-family: monospace; font-size: 12px;">
+            <button class="btn btn-primary btn-sm" id="btnTriggerFbDiscover" style="position: absolute; right: 5px; top: 5px; bottom: 5px;">
+              <i class="fa-solid fa-magnifying-glass"></i> খুঁজুন
+            </button>
+          </div>
+        </div>
+
+        <!-- Discovered Results Box -->
+        <div id="fbDiscoverStatusBox" style="display: none; margin-top: 15px;"></div>
+        <div id="fbDiscoveredList" class="discovered-list" style="display: none;"></div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="btnCancelFbDiscover">বন্ধ করুন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Google OAuth & YouTube Quick Setup -->
+  <div class="modal-backdrop" id="modalGoogleSetup" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3><i class="fa-brands fa-youtube text-red"></i> YouTube চ্যানেল ও Google Drive কানেকশন</h3>
+        <button class="btn-close" id="btnCloseGoogleSetup"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Connected Status Notice -->
+        <div id="boxGoogleConnectedNotice" style="display: none; background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-green); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-circle-check text-green" style="font-size: 20px;"></i>
+            <div>
+              <strong style="color: #fff;" id="lblGoogleConnectedEmail">Google Account Connected</strong>
+              <p style="margin: 0; font-size: 12px; color: var(--text-muted);" id="lblGoogleConnectedChannel">YouTube Data API সক্রিয়</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guided Steps for Google Cloud -->
+        <div class="step-guide-box">
+          <div style="font-weight: 700; color: #fff; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <span><i class="fa-brands fa-google text-red"></i> ৩০ সেকেন্ডে Google ক্লাউড সংযোগ:</span>
+            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="btn btn-outline btn-xs" style="color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.4); text-decoration: none;">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Google Cloud Credentials ↗
+            </a>
+          </div>
+          <div class="step-guide-item">
+            <div class="step-num">১</div>
+            <div><strong>Google Cloud Credentials</strong> এ গিয়ে <strong>Create Credentials -> OAuth client ID</strong> (Web application) নির্বাচন করুন।</div>
+          </div>
+          <div class="step-guide-item">
+            <div class="step-num">২</div>
+            <div>
+              Authorized redirect URIs-তে এই লিংকটি পেস্ট করুন: 
+              <span class="code-chip" id="chipGoogleRedirectUri">http://localhost:3000/api/auth/google/callback</span>
+              <button type="button" class="btn btn-ghost btn-xs" id="btnCopyRedirectUri" title="কপি করুন" style="padding: 2px 6px;"><i class="fa-solid fa-copy"></i></button>
+            </div>
+          </div>
+          <div class="step-guide-item">
+            <div class="step-num">৩</div>
+            <div>প্রাপ্ত <strong>Client ID</strong> ও <strong>Client Secret</strong> নিচে বসিয়ে "সেভ ও ১-ক্লিকে কানেক্ট" চাপুন!</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="font-weight: 600; color: #fff;">Google Client ID:</label>
+          <input type="text" id="inputGoogleClientId" class="form-control" placeholder="যেমন: 123456789-xxx.apps.googleusercontent.com">
+        </div>
+
+        <div class="form-group">
+          <label style="font-weight: 600; color: #fff;">Google Client Secret:</label>
+          <input type="password" id="inputGoogleClientSecret" class="form-control" placeholder="যেমন: GOCSPX-xxxxxxxxxxxx">
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-ghost" id="btnCancelGoogleSetup">বাতিল</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-outline" id="btnSaveGoogleCredsOnly">শুধু সেভ করুন</button>
+          <button class="btn btn-primary" id="btnSaveAndLaunchGoogleOAuth">
+            <i class="fa-brands fa-google"></i> সেভ ও ১-ক্লিকে কানেক্ট
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Modal: Add Social Account -->

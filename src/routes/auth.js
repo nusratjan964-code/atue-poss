@@ -8,7 +8,8 @@ const googleDrive = require('../services/googleDrive');
 // Status of Google OAuth & Gemini
 router.get('/status', async (req, res) => {
   const db = getDb();
-  const googleConfigured = !!(config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET);
+  const { clientId, clientSecret } = googleAuth.getGoogleCredentials();
+  const googleConfigured = !!(clientId && clientSecret);
   const googleTokens = db.settings.googleTokens;
   const hasAccessToken = !!googleTokens?.accessTokenEncrypted;
   const isExpired = googleTokens?.expiresAt ? Date.now() > googleTokens.expiresAt : false;

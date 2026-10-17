@@ -15,17 +15,26 @@ const REQUIRED_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.profile'
 ];
 
+function getGoogleCredentials() {
+  const db = getDb();
+  const clientId = (db && db.settings && db.settings.googleClientId) ? db.settings.googleClientId.trim() : (config.GOOGLE_CLIENT_ID || '').trim();
+  const clientSecret = (db && db.settings && db.settings.googleClientSecret) ? db.settings.googleClientSecret.trim() : (config.GOOGLE_CLIENT_SECRET || '').trim();
+  const redirectUri = config.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback';
+  return { clientId, clientSecret, redirectUri };
+}
+
 /**
  * Returns Google OAuth Authorization URL.
  */
 function getAuthUrl(state = '') {
-  if (!config.GOOGLE_CLIENT_ID) {
-    throw new Error('GOOGLE_CLIENT_ID is not configured in .env file.');
+  const { clientId, redirectUri } = getGoogleCredentials();
+  if (!clientId) {
+    throw new Error('Google Client ID কনফিগার করা নেই। অনুগ্রহ করে Settings বা Social Accounts থেকে Google Client ID প্রদান করুন।');
   }
 
   const params = new URLSearchParams({
-    client_id: config.GOOGLE_CLIENT_ID,
-    redirect_uri: config.GOOGLE_REDIRECT_URI,
+    client_id: clientId,
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: REQUIRED_SCOPES.join(' '),
     access_type: 'offline',
@@ -42,8 +51,9 @@ function getAuthUrl(state = '') {
  * Exchanges authorization code for access and refresh tokens.
  */
 async function exchangeCodeForTokens(code) {
-  if (!config.GOOGLE_CLIENT_ID || !config.GOOGLE_CLIENT_SECRET) {
-    throw new Error('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be configured.');
+  const { clientId, clientSecret, redirectUri } = getGoogleCredentials();
+  if (!clientId || !clientSecret) {
+    throw new Error('Google Client ID এবং Client Secret উভয়ই প্রয়োজন। Settings থেকে কনফিগার করুন।');
   }
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
@@ -51,9 +61,9 @@ async function exchangeCodeForTokens(code) {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       code,
-      client_id: config.GOOGLE_CLIENT_ID,
-      client_secret: config.GOOGLE_CLIENT_SECRET,
-      redirect_uri: config.GOOGLE_REDIRECT_URI,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
       grant_type: 'authorization_code'
     }).toString()
   });
@@ -140,12 +150,13 @@ async function refreshAccessToken() {
     throw new Error('Failed to decrypt stored Google refresh token.');
   }
 
+  const { clientId, clientSecret } = getGoogleCredentials();
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: config.GOOGLE_CLIENT_ID,
-      client_secret: config.GOOGLE_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type: 'refresh_token'
     }).toString()
@@ -276,5 +287,6 @@ module.exports = {
   fetchGoogleUserInfo,
   fetchYouTubeChannel,
   disconnectGoogle,
+  getGoogleCredentials,
   REQUIRED_SCOPES
 };
