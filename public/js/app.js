@@ -369,6 +369,18 @@ async function runInstantDriveUpload() {
           `;
         }
       }
+      const isTokenIssue = JSON.stringify(data.errors || {}).toLowerCase().includes('token') || 
+                           JSON.stringify(data.errors || {}).toLowerCase().includes('expired') || 
+                           (data.error || '').toLowerCase().includes('token') || 
+                           (data.error || '').toLowerCase().includes('expired');
+
+      const actionHelp = isTokenIssue ? `
+        <div style="margin-top: 10px; padding: 10px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; font-size: 12px; color: #93c5fd;">
+          💡 <strong>পরামর্শ:</strong> Facebook বা YouTube-এর একাউন্ট টোকেন মেয়াদোত্তীর্ণ বা কানেক্ট করা নেই। 
+          <button onclick="closeModal('modalInstantTestUpload'); switchTab('tab-accounts');" style="margin-top: 6px; display: inline-block; padding: 4px 10px; background: #3b82f6; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">Social Accounts পেজে টোকেন আপডেট করুন ➔</button>
+        </div>
+      ` : '';
+
       if (statusBox) {
         statusBox.innerHTML = `
           <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 8px; padding: 14px; color: #fca5a5; font-size: 13px;">
@@ -376,6 +388,7 @@ async function runInstantDriveUpload() {
               <i class="fa-solid fa-triangle-exclamation"></i> <strong>আপলোড ব্যর্থ:</strong> ${escapeHtml(data.error || 'ভিডিও প্রসেসিং করতে সমস্যা হয়েছে।')}
             </div>
             ${extraErrors}
+            ${actionHelp}
           </div>
         `;
       }

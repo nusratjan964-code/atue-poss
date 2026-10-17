@@ -1,5 +1,6 @@
 const https = require('https');
 const http = require('http');
+const { Readable } = require('stream');
 const fs = require('fs');
 const path = require('path');
 const config = require('../config');
@@ -402,7 +403,7 @@ async function streamDriveVideo(fileId, req, res) {
 
 /**
  * Downloads a video file to local temporary storage or memory buffer.
- * Needed for Gemini multimodal upload and reliable social platform uploads.
+ * Multi-candidate strategy prevents HTTP 403 on cloud/Vercel datacenter IPs.
  */
 async function downloadVideoToTempFile(fileId) {
   const tempDir = config.TEMP_DIR;
@@ -414,44 +415,123 @@ async function downloadVideoToTempFile(fileId) {
     console.warn('[GoogleDrive] Could not create tempDir:', e.message);
   }
 
-  const tempFilePath = path.join(tempDir, `drive_${fileId}_${Date.now()}.mp4`);
+  // Consistent filename to enable instant cache reuse within the same session/job
+  const tempFilePath = path.join(tempDir, `drive_${fileId}.mp4`);
+
+  // Check if file is already downloaded and valid (> 50KB, less than 2 hours old)
+  if (fs.existsSync(tempFilePath)) {
+    try {
+      const stats = fs.statSync(tempFilePath);
+      if (stats.size > 50000 && (Date.now() - stats.mtimeMs < 7200000)) {
+        console.log(`[GoogleDrive] Reusing cached downloaded video for ${fileId} (${stats.size} bytes)`);
+        return { filePath: tempFilePath, sizeBytes: stats.size };
+      }
+    } catch (e) {}
+  }
+
   const accessToken = await googleAuth.getValidAccessToken();
 
-  return new Promise((resolve, reject) => {
-    const fileStream = fs.createWriteStream(tempFilePath);
-    const url = accessToken
-      ? `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`
-      : `https://drive.usercontent.google.com/download?id=${fileId}&export=download`;
+  // Multi-candidate download strategies (prevents HTTP 403 on cloud/Vercel)
+  const candidateUrls = [];
+  if (accessToken) {
+    candidateUrls.push({
+      url: `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+  }
 
-    const headers = { 'User-Agent': 'Drive2Social/2.0' };
-    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+  // Standard modern browser headers to bypass datacenter 403 restrictions
+  const browserHeaders = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': '*/*',
+    'Accept-Language': 'en-US,en;q=0.9'
+  };
 
-    function executeDownload(targetUrl) {
-      https.get(targetUrl, { headers }, res => {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          return executeDownload(res.headers.location);
-        }
-        if (res.statusCode !== 200 && res.statusCode !== 206) {
-          fileStream.close();
-          fs.unlink(tempFilePath, () => {});
-          return reject(new Error(`Download failed with HTTP ${res.statusCode}`));
-        }
-
-        res.pipe(fileStream);
-        fileStream.on('finish', () => {
-          fileStream.close();
-          const stats = fs.statSync(tempFilePath);
-          resolve({ filePath: tempFilePath, sizeBytes: stats.size });
-        });
-      }).on('error', err => {
-        fileStream.close();
-        fs.unlink(tempFilePath, () => {});
-        reject(err);
-      });
-    }
-
-    executeDownload(url);
+  candidateUrls.push({
+    url: `https://drive.google.com/uc?id=${encodeURIComponent(fileId)}&export=download&confirm=t`,
+    headers: browserHeaders
   });
+  candidateUrls.push({
+    url: `https://docs.google.com/uc?export=download&id=${encodeURIComponent(fileId)}&confirm=t`,
+    headers: browserHeaders
+  });
+  candidateUrls.push({
+    url: `https://drive.usercontent.google.com/download?id=${encodeURIComponent(fileId)}&export=download&authuser=0&confirm=t`,
+    headers: browserHeaders
+  });
+
+  let lastError = null;
+
+  for (const candidate of candidateUrls) {
+    try {
+      console.log(`[GoogleDrive] Attempting video download for ${fileId} via ${candidate.url.substring(0, 50)}...`);
+      const res = await fetch(candidate.url, {
+        headers: candidate.headers,
+        redirect: 'follow'
+      });
+
+      if (!res.ok) {
+        console.warn(`[GoogleDrive] Candidate responded with HTTP ${res.status}`);
+        lastError = new Error(`HTTP ${res.status}`);
+        continue;
+      }
+
+      const contentType = res.headers.get('content-type') || '';
+
+      // If Google returns an HTML warning / virus confirmation page, extract the confirm download URL
+      if (contentType.includes('text/html')) {
+        const html = await res.text();
+        const match = html.match(/href="([^"]+confirm=[^"]+)"/) || 
+                      html.match(/action="([^"]+download[^"]*)"/) ||
+                      html.match(/href="([^"]+uc-download-link[^"]*)"/);
+        if (match) {
+          const nextUrl = match[1].replace(/&amp;/g, '&');
+          console.log('[GoogleDrive] Following HTML confirmation link for download...');
+          const r2 = await fetch(nextUrl, {
+            headers: browserHeaders,
+            redirect: 'follow'
+          });
+          if (r2.ok) {
+            const fileStream = fs.createWriteStream(tempFilePath);
+            await new Promise((resolve, reject) => {
+              Readable.fromWeb(r2.body).pipe(fileStream).on('finish', resolve).on('error', reject);
+            });
+            const stats = fs.statSync(tempFilePath);
+            if (stats.size > 10000) {
+              return { filePath: tempFilePath, sizeBytes: stats.size };
+            }
+          }
+        }
+        lastError = new Error('Received HTML confirmation instead of video stream');
+        continue;
+      }
+
+      // Stream binary data to temp file
+      const fileStream = fs.createWriteStream(tempFilePath);
+      await new Promise((resolve, reject) => {
+        Readable.fromWeb(res.body).pipe(fileStream).on('finish', resolve).on('error', reject);
+      });
+
+      const stats = fs.statSync(tempFilePath);
+      if (stats.size > 10000) {
+        console.log(`[GoogleDrive] Video ${fileId} downloaded successfully (${stats.size} bytes)`);
+        return { filePath: tempFilePath, sizeBytes: stats.size };
+      } else {
+        throw new Error(`Downloaded file too small: ${stats.size} bytes`);
+      }
+    } catch (candErr) {
+      console.warn(`[GoogleDrive] Download candidate failed:`, candErr.message);
+      lastError = candErr;
+      if (fs.existsSync(tempFilePath)) {
+        try { fs.unlinkSync(tempFilePath); } catch (e) {}
+      }
+    }
+  }
+
+  throw new Error(`Google Drive download failed across all sources: ${lastError ? lastError.message : 'Unknown error'}`);
 }
 
 /**
