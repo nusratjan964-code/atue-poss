@@ -328,7 +328,12 @@ async function runInstantDriveUpload() {
       let errorHtml = '';
       if (data.errors && Object.keys(data.errors).length > 0) {
         for (const [p, err] of Object.entries(data.errors)) {
-          errorHtml += `<div style="color: #fca5a5; font-size: 12px; margin-top: 4px;">⚠️ ${p.toUpperCase()}: ${escapeHtml(err)}</div>`;
+          const pLabel = p === 'youtube' ? 'YouTube' : 'Facebook';
+          errorHtml += `
+            <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 8px 10px; margin-top: 8px; color: #fcd34d; font-size: 12px;">
+              ⚠️ <strong>${pLabel}:</strong> ${escapeHtml(err)}
+            </div>
+          `;
         }
       }
 
@@ -353,10 +358,24 @@ async function runInstantDriveUpload() {
       loadDashboardStats();
       loadQueue();
     } else {
+      let extraErrors = '';
+      if (data.errors && Object.keys(data.errors).length > 0) {
+        for (const [p, err] of Object.entries(data.errors)) {
+          const pLabel = p === 'youtube' ? 'YouTube Shorts' : 'Facebook Reels';
+          extraErrors += `
+            <div style="margin-top: 6px; padding: 6px 10px; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 12px;">
+              ❌ <strong>${pLabel}:</strong> ${escapeHtml(err)}
+            </div>
+          `;
+        }
+      }
       if (statusBox) {
         statusBox.innerHTML = `
           <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 8px; padding: 14px; color: #fca5a5; font-size: 13px;">
-            <i class="fa-solid fa-triangle-exclamation"></i> <strong>আপলোড ব্যর্থ:</strong> ${escapeHtml(data.error || 'ভিডিও প্রসেসিং করতে সমস্যা হয়েছে।')}
+            <div style="margin-bottom: 4px;">
+              <i class="fa-solid fa-triangle-exclamation"></i> <strong>আপলোড ব্যর্থ:</strong> ${escapeHtml(data.error || 'ভিডিও প্রসেসিং করতে সমস্যা হয়েছে।')}
+            </div>
+            ${extraErrors}
           </div>
         `;
       }
